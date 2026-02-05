@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G*BOY Audio Analyzer v2.0 [NEUKO-AI]</title>
+    <title>G*BOY Audio Analyzer v3.0 [NEUKO-AI]</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap');
         
@@ -18,32 +18,23 @@
             --crt-amber: #ffb000;
             --crt-dark: #001100;
             --crt-glow: #00ff0044;
-            --scanline: rgba(0, 255, 0, 0.05);
         }
         
         body {
             font-family: 'VT323', monospace;
             background: #000;
             color: var(--crt-green);
-            overflow-x: hidden;
-            cursor: crosshair;
             line-height: 1.4;
         }
         
         .crt-container {
             background: var(--crt-dark);
             min-height: 100vh;
-            position: relative;
             padding: 20px;
-            animation: flicker 0.15s infinite;
+            position: relative;
         }
         
-        @keyframes flicker {
-            0% { opacity: 0.97; }
-            50% { opacity: 1; }
-            100% { opacity: 0.98; }
-        }
-        
+        /* Scanlines */
         .crt-container::before {
             content: "";
             position: fixed;
@@ -51,60 +42,36 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                var(--scanline) 2px,
-                var(--scanline) 4px
-            );
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 0, 0.05) 2px, rgba(0, 255, 0, 0.05) 4px);
             pointer-events: none;
             z-index: 999;
-        }
-        
-        .crt-container::after {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
-            pointer-events: none;
-            z-index: 998;
         }
         
         .header {
             text-align: center;
             margin-bottom: 30px;
-            text-shadow: 0 0 10px var(--crt-glow);
         }
         
         .header h1 {
             font-family: 'Press Start 2P', monospace;
             font-size: 24px;
-            margin-bottom: 10px;
-            animation: glow 2s ease-in-out infinite;
-        }
-        
-        @keyframes glow {
-            0%, 100% { text-shadow: 0 0 5px var(--crt-glow), 0 0 10px var(--crt-glow); }
-            50% { text-shadow: 0 0 10px var(--crt-glow), 0 0 20px var(--crt-glow), 0 0 30px var(--crt-glow); }
+            color: var(--crt-green);
+            text-shadow: 0 0 10px var(--crt-glow);
         }
         
         .header .subtitle {
             font-size: 18px;
             color: var(--crt-amber);
-            margin-top: 5px;
+            margin-top: 10px;
         }
         
         .terminal-box {
             border: 3px solid var(--crt-green);
             padding: 20px;
             margin: 20px auto;
-            max-width: 1400px;
+            max-width: 1200px;
             background: rgba(0, 17, 0, 0.8);
-            box-shadow: 0 0 20px var(--crt-glow), inset 0 0 20px var(--crt-glow);
+            box-shadow: 0 0 20px var(--crt-glow);
         }
         
         .section-title {
@@ -122,18 +89,11 @@
             border: 2px dashed var(--crt-green);
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
             background: rgba(0, 255, 0, 0.05);
         }
         
         .file-input-area:hover {
             background: rgba(0, 255, 0, 0.1);
-            border-color: var(--crt-amber);
-        }
-        
-        .file-input-area.dragover {
-            background: rgba(255, 176, 0, 0.2);
-            border-color: var(--crt-amber);
         }
         
         input[type="file"] {
@@ -150,28 +110,11 @@
             cursor: pointer;
             margin: 5px;
             transition: all 0.3s;
-            text-shadow: 0 0 5px var(--crt-glow);
-            box-shadow: 0 0 10px var(--crt-glow);
         }
         
         .btn:hover {
             background: var(--crt-green);
             color: var(--crt-dark);
-            box-shadow: 0 0 20px var(--crt-glow);
-        }
-        
-        .btn:active {
-            transform: scale(0.95);
-        }
-        
-        .btn.amber {
-            border-color: var(--crt-amber);
-            color: var(--crt-amber);
-        }
-        
-        .btn.amber:hover {
-            background: var(--crt-amber);
-            color: #000;
         }
         
         .btn.active {
@@ -184,7 +127,6 @@
             flex-wrap: wrap;
             gap: 10px;
             margin: 20px 0;
-            justify-content: center;
             align-items: center;
         }
         
@@ -193,84 +135,7 @@
             border: 2px solid var(--crt-green);
             background: #000;
             margin: 10px 0;
-            box-shadow: 0 0 15px var(--crt-glow);
-            image-rendering: pixelated;
-        }
-        
-        .analysis-output {
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid var(--crt-green);
-            padding: 15px;
-            margin: 10px 0;
-            font-size: 16px;
-            max-height: 300px;
-            overflow-y: auto;
-            font-family: 'VT323', monospace;
-        }
-        
-        .analysis-output::-webkit-scrollbar {
-            width: 10px;
-        }
-        
-        .analysis-output::-webkit-scrollbar-track {
-            background: var(--crt-dark);
-        }
-        
-        .analysis-output::-webkit-scrollbar-thumb {
-            background: var(--crt-green);
-            border: 1px solid var(--crt-dark);
-        }
-        
-        .log-line {
-            margin: 5px 0;
-            animation: fadeIn 0.5s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        .log-line.warning {
-            color: var(--crt-amber);
-        }
-        
-        .log-line.success {
-            color: #00ff00;
-        }
-        
-        .log-line.error {
-            color: #ff0000;
-            text-shadow: 0 0 5px #ff0000;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        
-        .stat-box {
-            border: 2px solid var(--crt-green);
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.6);
-        }
-        
-        .stat-label {
-            color: var(--crt-amber);
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-        
-        .stat-value {
-            font-size: 20px;
-            color: var(--crt-green);
-            font-family: 'Press Start 2P', monospace;
-        }
-        
-        .hidden {
-            display: none;
+            display: block;
         }
         
         audio, video {
@@ -280,54 +145,48 @@
             background: #000;
         }
         
-        .blinking {
-            animation: blink 1s infinite;
+        .log {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--crt-green);
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 16px;
+            max-height: 200px;
+            overflow-y: auto;
         }
         
-        @keyframes blink {
-            0%, 49% { opacity: 1; }
-            50%, 100% { opacity: 0; }
+        .log div {
+            margin: 3px 0;
         }
         
-        .visualization-mode {
-            display: flex;
+        .success { color: #00ff00; }
+        .warning { color: #ffb000; }
+        .error { color: #ff0000; }
+        
+        .hidden { display: none; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 10px;
-            flex-wrap: wrap;
             margin: 15px 0;
         }
         
-        .mode-btn {
-            font-family: 'VT323', monospace;
-            font-size: 18px;
-            padding: 8px 15px;
-            background: transparent;
-            color: var(--crt-green);
+        .stat-box {
             border: 2px solid var(--crt-green);
-            cursor: pointer;
-            transition: all 0.3s;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.6);
         }
         
-        .mode-btn.active {
-            background: var(--crt-green);
-            color: var(--crt-dark);
-        }
-        
-        select, input[type="range"] {
-            font-family: 'VT323', monospace;
-            font-size: 18px;
-            background: var(--crt-dark);
-            color: var(--crt-green);
-            border: 2px solid var(--crt-green);
-            padding: 5px;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            border-top: 2px solid var(--crt-green);
-            font-size: 14px;
+        .stat-label {
             color: var(--crt-amber);
+            font-size: 14px;
+        }
+        
+        .stat-value {
+            color: var(--crt-green);
+            font-size: 18px;
+            font-family: 'Press Start 2P', monospace;
         }
     </style>
 </head>
@@ -335,564 +194,423 @@
     <div class="crt-container">
         <div class="header">
             <h1>G*BOY AUDIO ANALYZER</h1>
-            <div class="subtitle">NEUKO-AI | REAL-TIME ANALYSIS v2.0</div>
-            <div style="font-size: 14px; margin-top: 10px;">
-                <span class="blinking">▊</span> SYSTEM READY <span class="blinking">▊</span>
-            </div>
+            <div class="subtitle">NEUKO-AI | v3.0 OPTIMIZED</div>
         </div>
 
+        <!-- FILE UPLOAD -->
         <div class="terminal-box">
-            <div class="section-title">&gt; FILE UPLOAD MODULE</div>
-            
+            <div class="section-title">&gt; UPLOAD</div>
             <div class="file-input-area" id="dropZone">
-                <div style="font-size: 24px; margin-bottom: 10px;">⬇ DROP AUDIO/VIDEO FILE HERE ⬇</div>
-                <div style="font-size: 18px; color: var(--crt-amber);">
-                    Supported: MP3, WAV, OGG, MP4, WEBM, AVI
+                <div style="font-size: 24px;">DROP AUDIO/VIDEO HERE</div>
+                <div style="font-size: 18px; color: var(--crt-amber); margin-top: 10px;">
+                    MP3, WAV, OGG, MP4, WEBM
                 </div>
                 <input type="file" id="fileInput" accept="audio/*,video/*">
-                <button class="btn" onclick="document.getElementById('fileInput').click()">
-                    SELECT FILE
-                </button>
+                <button class="btn" onclick="document.getElementById('fileInput').click()">SELECT FILE</button>
             </div>
-
-            <div id="fileInfo" class="analysis-output hidden"></div>
-            
-            <audio id="audioPlayer" controls class="hidden"></audio>
-            <video id="videoPlayer" controls class="hidden"></video>
+            <div id="fileLog" class="log hidden"></div>
         </div>
 
-        <div id="analysisSection" class="terminal-box hidden">
-            <div class="section-title">&gt; REAL-TIME VISUALIZATION</div>
-            
-            <div class="visualization-mode">
-                <button class="mode-btn active" onclick="setVisualizationMode('spectrogram')">SPECTROGRAM</button>
-                <button class="mode-btn" onclick="setVisualizationMode('waveform')">WAVEFORM</button>
-                <button class="mode-btn" onclick="setVisualizationMode('frequency')">FREQUENCY</button>
-                <button class="mode-btn" onclick="setVisualizationMode('oscilloscope')">OSCILLOSCOPE</button>
-            </div>
-            
-            <div class="controls">
-                <button class="btn" id="playBtn" onclick="togglePlayback()">▶ PLAY</button>
-                <button class="btn amber" onclick="stopPlayback()">■ STOP</button>
-                <button class="btn" onclick="downloadCanvas()">💾 SAVE IMAGE</button>
-                <label style="color: var(--crt-amber);">
-                    Speed: 
-                    <select id="playbackRate" onchange="changePlaybackRate()">
-                        <option value="0.25">0.25x</option>
-                        <option value="0.5">0.5x</option>
-                        <option value="0.75">0.75x</option>
-                        <option value="1" selected>1.0x</option>
-                        <option value="1.5">1.5x</option>
-                        <option value="2">2.0x</option>
-                    </select>
-                </label>
-            </div>
-            
-            <canvas id="visualizationCanvas" width="1400" height="600"></canvas>
-            
-            <div class="stats-grid">
+        <!-- MEDIA PLAYER -->
+        <div id="playerSection" class="terminal-box hidden">
+            <div class="section-title">&gt; PLAYER</div>
+            <audio id="audioElement" controls></audio>
+            <video id="videoElement" controls class="hidden"></video>
+            <div class="stats">
                 <div class="stat-box">
-                    <div class="stat-label">PLAYBACK TIME</div>
-                    <div class="stat-value" id="currentTime" style="font-size: 16px;">00:00.0</div>
+                    <div class="stat-label">DURATION</div>
+                    <div class="stat-value" id="duration">--</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">PEAK FREQUENCY</div>
-                    <div class="stat-value" id="peakFreq" style="font-size: 16px;">-- Hz</div>
+                    <div class="stat-label">SAMPLE RATE</div>
+                    <div class="stat-value" id="sampleRate">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISUALIZATION -->
+        <div id="vizSection" class="terminal-box hidden">
+            <div class="section-title">&gt; REAL-TIME VISUALIZATION</div>
+            <div class="controls">
+                <button class="btn active" onclick="setMode('spectrogram')">SPECTROGRAM</button>
+                <button class="btn" onclick="setMode('waveform')">WAVEFORM</button>
+                <button class="btn" onclick="setMode('frequency')">FREQUENCY</button>
+            </div>
+            <canvas id="canvas" width="1200" height="500"></canvas>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-label">PEAK FREQ</div>
+                    <div class="stat-value" id="peakFreq" style="font-size: 14px;">--</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">AMPLITUDE</div>
-                    <div class="stat-value" id="amplitude" style="font-size: 16px;">--</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">MODE</div>
-                    <div class="stat-value" id="modeDisplay" style="font-size: 16px;">SPECTROGRAM</div>
+                    <div class="stat-value" id="amplitude" style="font-size: 14px;">--</div>
                 </div>
             </div>
-            
-            <div class="analysis-output" id="log"></div>
         </div>
 
+        <!-- TOOLS -->
         <div id="toolsSection" class="terminal-box hidden">
             <div class="section-title">&gt; ANALYSIS TOOLS</div>
-            
             <div class="controls">
-                <button class="btn" onclick="reverseAudio()">🔄 REVERSE AUDIO</button>
-                <button class="btn" onclick="detectLSB()">🔍 LSB ANALYSIS</button>
-                <button class="btn" onclick="analyzeNoiseFloor()">📊 NOISE FLOOR</button>
-                <button class="btn" onclick="extractMetadata()">📝 METADATA</button>
+                <button class="btn" onclick="reverseAudio()">REVERSE</button>
+                <button class="btn" onclick="detectLSB()">LSB CHECK</button>
+                <button class="btn" onclick="analyzeNoise()">NOISE FLOOR</button>
+                <button class="btn" onclick="showMetadata()">METADATA</button>
+                <button class="btn" onclick="downloadViz()">SAVE IMAGE</button>
             </div>
-            
-            <div class="analysis-output" id="toolsLog"></div>
+            <div id="toolsLog" class="log"></div>
         </div>
 
-        <div class="footer">
-            <div>[ G*BOY AUDIO ANALYZER | OPEN SOURCE ]</div>
-            <div style="margin-top: 10px; font-size: 12px;">
-                Created for the NeukoAI ARG Community | Web3 Puzzle Solver
-            </div>
-            <div style="margin-top: 10px; font-size: 12px;">
-                &copy; 2025 | MIT License | github.com/eNudimmud/gboy-audio-analyzer
-            </div>
+        <div style="text-align: center; margin-top: 40px; color: var(--crt-amber); font-size: 14px;">
+            [ G*BOY | MIT License | github.com/eNudimmud/gboy-audio-analyzer ]
         </div>
     </div>
 
     <script>
-        // Global variables
+        // GLOBALS
         let audioContext;
-        let audioBuffer;
-        let audioSource;
         let analyser;
-        let isPlaying = false;
-        let visualizationMode = 'spectrogram';
+        let mediaElement;
+        let source;
+        let audioBuffer;
+        let isVideo = false;
+        let vizMode = 'spectrogram';
         let animationId;
         let audioFile;
-        let startTime = 0;
-        let pauseTime = 0;
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            setupEventListeners();
-            initAudioContext();
-        });
-        
-        function initAudioContext() {
+
+        // INIT
+        window.addEventListener('load', () => {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            setupFileInput();
+        });
+
+        // FILE INPUT SETUP
+        function setupFileInput() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files[0]) loadFile(e.target.files[0]);
+            });
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.background = 'rgba(255, 176, 0, 0.2)';
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.style.background = 'rgba(0, 255, 0, 0.05)';
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.background = 'rgba(0, 255, 0, 0.05)';
+                if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+            });
+        }
+
+        // LOAD FILE
+        async function loadFile(file) {
+            audioFile = file;
+            isVideo = file.type.startsWith('video');
+
+            log('fileLog', `Loading: ${file.name}`, 'success');
+            log('fileLog', `Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, 'success');
+
+            document.getElementById('fileLog').classList.remove('hidden');
+
+            try {
+                // Setup media element
+                if (isVideo) {
+                    mediaElement = document.getElementById('videoElement');
+                    document.getElementById('audioElement').classList.add('hidden');
+                    mediaElement.classList.remove('hidden');
+                } else {
+                    mediaElement = document.getElementById('audioElement');
+                    document.getElementById('videoElement').classList.add('hidden');
+                    mediaElement.classList.remove('hidden');
+                }
+
+                // Load file into media element
+                mediaElement.src = URL.createObjectURL(file);
+                
+                // Wait for metadata
+                await new Promise((resolve) => {
+                    mediaElement.onloadedmetadata = resolve;
+                });
+
+                // Decode audio buffer for analysis
+                const arrayBuffer = await file.arrayBuffer();
+                try {
+                    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    log('fileLog', 'Audio decoded successfully', 'success');
+                } catch (e) {
+                    log('fileLog', 'Using media element for analysis', 'warning');
+                }
+
+                // Setup Web Audio
+                setupAudio();
+
+                // Show sections
+                document.getElementById('playerSection').classList.remove('hidden');
+                document.getElementById('vizSection').classList.remove('hidden');
+                document.getElementById('toolsSection').classList.remove('hidden');
+
+                // Update stats
+                document.getElementById('duration').textContent = mediaElement.duration.toFixed(1) + 's';
+                document.getElementById('sampleRate').textContent = audioContext.sampleRate + 'Hz';
+
+                log('fileLog', '✅ READY! Press play on the media player', 'success');
+
+            } catch (error) {
+                log('fileLog', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        // SETUP AUDIO ANALYSIS
+        function setupAudio() {
+            // Remove old source if exists
+            if (source) {
+                try { source.disconnect(); } catch(e) {}
+            }
+
+            // Create analyser
             analyser = audioContext.createAnalyser();
             analyser.fftSize = 2048;
             analyser.smoothingTimeConstant = 0.8;
-        }
-        
-        function setupEventListeners() {
-            const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('fileInput');
-            
-            fileInput.addEventListener('change', handleFileSelect);
-            
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-            
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('dragover');
-            });
-            
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    handleFile(files[0]);
-                }
-            });
-        }
-        
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file) {
-                handleFile(file);
-            }
-        }
-        
-        async function handleFile(file) {
-            audioFile = file;
-            const isVideo = file.type.startsWith('video/');
-            
-            log(`Loading: ${file.name}`, 'success');
-            log(`Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, 'success');
-            log(`Type: ${file.type}`, 'success');
-            
-            document.getElementById('fileInfo').classList.remove('hidden');
-            
-            try {
-                if (isVideo) {
-                    await loadVideoFile(file);
-                } else {
-                    await loadAudioFile(file);
-                }
-                
-                document.getElementById('analysisSection').classList.remove('hidden');
-                document.getElementById('toolsSection').classList.remove('hidden');
-                
-                log('✅ FILE LOADED - Ready for real-time analysis!', 'success');
-                log('Click PLAY to start visualization', 'warning');
-                
-            } catch (error) {
-                log(`Error: ${error.message}`, 'error');
-            }
-        }
-        
-        async function loadAudioFile(file) {
-            const arrayBuffer = await file.arrayBuffer();
-            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            
-            const audioPlayer = document.getElementById('audioPlayer');
-            audioPlayer.src = URL.createObjectURL(file);
-            audioPlayer.classList.remove('hidden');
-            
-            log(`Duration: ${audioBuffer.duration.toFixed(2)}s`, 'success');
-            log(`Sample Rate: ${audioBuffer.sampleRate} Hz`, 'success');
-            log(`Channels: ${audioBuffer.numberOfChannels}`, 'success');
-        }
-        
-        async function loadVideoFile(file) {
-            const videoPlayer = document.getElementById('videoPlayer');
-            videoPlayer.src = URL.createObjectURL(file);
-            videoPlayer.classList.remove('hidden');
-            
-            return new Promise((resolve) => {
-                videoPlayer.onloadedmetadata = async () => {
-                    log(`Video: ${videoPlayer.videoWidth}x${videoPlayer.videoHeight}`, 'success');
-                    log(`Duration: ${videoPlayer.duration.toFixed(2)}s`, 'success');
-                    
-                    // Create buffer from video duration
-                    audioBuffer = audioContext.createBuffer(
-                        2,
-                        videoPlayer.duration * audioContext.sampleRate,
-                        audioContext.sampleRate
-                    );
-                    
-                    log('Video loaded - audio analysis ready', 'success');
-                    resolve();
-                };
-            });
-        }
-        
-        function togglePlayback() {
-            if (isPlaying) {
-                pausePlayback();
-            } else {
-                startPlayback();
-            }
-        }
-        
-        function startPlayback() {
-            if (!audioBuffer) {
-                alert('Please load a file first!');
-                return;
-            }
-            
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-            
-            // Stop previous source if exists
-            if (audioSource) {
-                try { audioSource.stop(); } catch(e) {}
-            }
-            
-            // Create new source
-            audioSource = audioContext.createBufferSource();
-            audioSource.buffer = audioBuffer;
-            audioSource.connect(analyser);
+
+            // Connect media element to analyser
+            source = audioContext.createMediaElementSource(mediaElement);
+            source.connect(analyser);
             analyser.connect(audioContext.destination);
-            
-            // Start from pause point or beginning
-            const offset = pauseTime || 0;
-            audioSource.start(0, offset);
-            startTime = audioContext.currentTime - offset;
-            
-            isPlaying = true;
-            document.getElementById('playBtn').textContent = '⏸ PAUSE';
-            
-            // Start visualization
-            visualize();
-            
-            // Handle end
-            audioSource.onended = () => {
-                if (isPlaying) {
-                    stopPlayback();
+
+            // Start visualization when playing
+            mediaElement.onplay = () => {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
                 }
+                startVisualization();
             };
-            
-            log('Playback started', 'success');
+
+            mediaElement.onpause = () => {
+                stopVisualization();
+            };
+
+            mediaElement.onended = () => {
+                stopVisualization();
+            };
         }
-        
-        function pausePlayback() {
-            if (audioSource) {
-                pauseTime = audioContext.currentTime - startTime;
-                audioSource.stop();
-                isPlaying = false;
-                document.getElementById('playBtn').textContent = '▶ PLAY';
-                cancelAnimationFrame(animationId);
-                log('Playback paused', 'warning');
-            }
-        }
-        
-        function stopPlayback() {
-            if (audioSource) {
-                audioSource.stop();
-            }
-            isPlaying = false;
-            pauseTime = 0;
-            startTime = 0;
-            document.getElementById('playBtn').textContent = '▶ PLAY';
-            cancelAnimationFrame(animationId);
-            log('Playback stopped', 'warning');
-        }
-        
-        function changePlaybackRate() {
-            const rate = parseFloat(document.getElementById('playbackRate').value);
-            if (audioSource) {
-                audioSource.playbackRate.value = rate;
-                log(`Speed changed to ${rate}x`, 'success');
-            }
-        }
-        
-        function setVisualizationMode(mode) {
-            visualizationMode = mode;
-            document.getElementById('modeDisplay').textContent = mode.toUpperCase();
-            
-            // Update button states
-            document.querySelectorAll('.mode-btn').forEach(btn => {
+
+        // VISUALIZATION
+        function setMode(mode) {
+            vizMode = mode;
+            document.querySelectorAll('.controls .btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
-            
-            log(`Visualization mode: ${mode}`, 'success');
         }
-        
-        function visualize() {
-            if (!isPlaying) return;
-            
-            const canvas = document.getElementById('visualizationCanvas');
+
+        function startVisualization() {
+            const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
             const height = canvas.height;
-            
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            
+
             function draw() {
-                if (!isPlaying) return;
-                
+                if (mediaElement.paused) return;
+
                 animationId = requestAnimationFrame(draw);
-                
-                // Update time display
-                const currentTime = audioContext.currentTime - startTime;
-                const mins = Math.floor(currentTime / 60);
-                const secs = Math.floor(currentTime % 60);
-                const ms = Math.floor((currentTime % 1) * 10);
-                document.getElementById('currentTime').textContent = 
-                    `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${ms}`;
-                
-                if (visualizationMode === 'spectrogram') {
-                    drawSpectrogram(ctx, width, height, dataArray, bufferLength);
-                } else if (visualizationMode === 'waveform') {
-                    drawWaveform(ctx, width, height, dataArray, bufferLength);
-                } else if (visualizationMode === 'frequency') {
-                    drawFrequency(ctx, width, height, dataArray, bufferLength);
-                } else if (visualizationMode === 'oscilloscope') {
-                    drawOscilloscope(ctx, width, height, dataArray, bufferLength);
+
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                if (vizMode === 'spectrogram') {
+                    analyser.getByteFrequencyData(dataArray);
+                    
+                    // Scroll left
+                    const imageData = ctx.getImageData(1, 0, width - 1, height);
+                    ctx.putImageData(imageData, 0, 0);
+
+                    // Draw new column
+                    for (let i = 0; i < height; i++) {
+                        const index = Math.floor((i / height) * bufferLength);
+                        const value = dataArray[index];
+                        ctx.fillStyle = `rgb(0, ${value}, 0)`;
+                        ctx.fillRect(width - 1, height - i - 1, 1, 1);
+                    }
+
+                    updateStats(dataArray);
+
+                } else if (vizMode === 'waveform') {
+                    analyser.getByteTimeDomainData(dataArray);
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+
+                    const sliceWidth = width / bufferLength;
+                    let x = 0;
+
+                    for (let i = 0; i < bufferLength; i++) {
+                        const v = dataArray[i] / 128.0;
+                        const y = v * height / 2;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                        x += sliceWidth;
+                    }
+
+                    ctx.stroke();
+
+                } else if (vizMode === 'frequency') {
+                    analyser.getByteFrequencyData(dataArray);
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(0, 0, width, height);
+
+                    const barWidth = width / bufferLength * 2;
+                    let x = 0;
+
+                    for (let i = 0; i < bufferLength; i++) {
+                        const barHeight = (dataArray[i] / 255) * height;
+                        ctx.fillStyle = `rgb(0, ${dataArray[i]}, 0)`;
+                        ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+                        x += barWidth + 1;
+                    }
+
+                    updateStats(dataArray);
                 }
             }
-            
+
             draw();
         }
-        
-        function drawSpectrogram(ctx, width, height, dataArray, bufferLength) {
-            analyser.getByteFrequencyData(dataArray);
-            
-            // Shift existing data left
-            const imageData = ctx.getImageData(1, 0, width - 1, height);
-            ctx.putImageData(imageData, 0, 0);
-            
-            // Draw new column on right
-            for (let i = 0; i < height; i++) {
-                const index = Math.floor((i / height) * bufferLength);
-                const value = dataArray[index];
-                
-                // Green CRT color
-                const intensity = value;
-                ctx.fillStyle = `rgb(0, ${intensity}, 0)`;
-                ctx.fillRect(width - 1, height - i - 1, 1, 1);
-            }
-            
-            // Update peak frequency
-            const maxIndex = dataArray.indexOf(Math.max(...dataArray));
-            const peakFreq = (maxIndex / bufferLength) * (audioContext.sampleRate / 2);
-            document.getElementById('peakFreq').textContent = `${Math.round(peakFreq)} Hz`;
-            
-            // Update amplitude
-            const avgAmplitude = dataArray.reduce((a, b) => a + b) / bufferLength;
-            document.getElementById('amplitude').textContent = Math.round(avgAmplitude);
-        }
-        
-        function drawWaveform(ctx, width, height, dataArray, bufferLength) {
-            analyser.getByteTimeDomainData(dataArray);
-            
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
-            
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#00ff00';
-            ctx.beginPath();
-            
-            const sliceWidth = width / bufferLength;
-            let x = 0;
-            
-            for (let i = 0; i < bufferLength; i++) {
-                const v = dataArray[i] / 128.0;
-                const y = v * height / 2;
-                
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-                
-                x += sliceWidth;
-            }
-            
-            ctx.lineTo(width, height / 2);
-            ctx.stroke();
-        }
-        
-        function drawFrequency(ctx, width, height, dataArray, bufferLength) {
-            analyser.getByteFrequencyData(dataArray);
-            
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
-            
-            const barWidth = (width / bufferLength) * 2.5;
-            let x = 0;
-            
-            for (let i = 0; i < bufferLength; i++) {
-                const barHeight = (dataArray[i] / 255) * height;
-                
-                ctx.fillStyle = `rgb(0, ${dataArray[i]}, 0)`;
-                ctx.fillRect(x, height - barHeight, barWidth, barHeight);
-                
-                x += barWidth + 1;
+
+        function stopVisualization() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
             }
         }
-        
-        function drawOscilloscope(ctx, width, height, dataArray, bufferLength) {
-            analyser.getByteTimeDomainData(dataArray);
+
+        function updateStats(dataArray) {
+            const maxVal = Math.max(...dataArray);
+            const maxIndex = dataArray.indexOf(maxVal);
+            const peakFreq = (maxIndex / dataArray.length) * (audioContext.sampleRate / 2);
             
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
-            
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = '#00ff00';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00ff00';
-            
-            ctx.beginPath();
-            
-            const sliceWidth = width / bufferLength;
-            let x = 0;
-            
-            for (let i = 0; i < bufferLength; i++) {
-                const v = dataArray[i] / 128.0;
-                const y = v * height / 2;
-                
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-                
-                x += sliceWidth;
-            }
-            
-            ctx.stroke();
-            ctx.shadowBlur = 0;
+            document.getElementById('peakFreq').textContent = Math.round(peakFreq) + ' Hz';
+            document.getElementById('amplitude').textContent = Math.round(maxVal);
         }
-        
-        function downloadCanvas() {
-            const canvas = document.getElementById('visualizationCanvas');
-            const link = document.createElement('a');
-            link.download = `gboy_${visualizationMode}_${Date.now()}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-            log('Image saved!', 'success');
-        }
-        
+
         // TOOLS
         function reverseAudio() {
-            if (!audioBuffer) return;
-            
+            if (!audioBuffer) {
+                toolLog('No audio buffer available', 'error');
+                return;
+            }
+
             toolLog('Reversing audio...', 'success');
-            
+
             const reversed = audioContext.createBuffer(
                 audioBuffer.numberOfChannels,
                 audioBuffer.length,
                 audioBuffer.sampleRate
             );
-            
-            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-                const original = audioBuffer.getChannelData(channel);
-                const reversedData = reversed.getChannelData(channel);
-                
+
+            for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                const original = audioBuffer.getChannelData(ch);
+                const reversedData = reversed.getChannelData(ch);
                 for (let i = 0; i < original.length; i++) {
                     reversedData[i] = original[original.length - 1 - i];
                 }
             }
-            
+
             audioBuffer = reversed;
-            toolLog('Audio reversed! Click PLAY to hear it', 'success');
+            
+            // Create new audio element with reversed buffer
+            const offlineCtx = new OfflineAudioContext(
+                reversed.numberOfChannels,
+                reversed.length,
+                reversed.sampleRate
+            );
+            const bufferSource = offlineCtx.createBufferSource();
+            bufferSource.buffer = reversed;
+            bufferSource.connect(offlineCtx.destination);
+            bufferSource.start();
+
+            offlineCtx.startRendering().then(renderedBuffer => {
+                const wav = bufferToWave(renderedBuffer);
+                const blob = new Blob([wav], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                
+                mediaElement.src = url;
+                setupAudio();
+                
+                toolLog('✅ Audio reversed! Play to hear it', 'success');
+            });
         }
-        
+
         function detectLSB() {
-            if (!audioBuffer) return;
-            
-            toolLog('Analyzing LSB patterns...', 'success');
-            
-            const channelData = audioBuffer.getChannelData(0);
+            if (!audioBuffer) {
+                toolLog('No audio buffer available', 'error');
+                return;
+            }
+
+            toolLog('Analyzing LSB...', 'success');
+
+            const data = audioBuffer.getChannelData(0);
             let ones = 0;
-            const sampleSize = Math.min(10000, channelData.length);
-            
-            for (let i = 0; i < sampleSize; i++) {
-                const sample = channelData[i];
-                const intSample = Math.floor(sample * 32768);
+            const samples = Math.min(10000, data.length);
+
+            for (let i = 0; i < samples; i++) {
+                const intSample = Math.floor(data[i] * 32768);
                 if ((intSample & 1) === 1) ones++;
             }
-            
-            const ratio = ones / sampleSize;
-            toolLog(`LSB distribution: ${(ratio * 100).toFixed(2)}% ones`, 'success');
-            
+
+            const ratio = ones / samples;
+            toolLog(`LSB ratio: ${(ratio * 100).toFixed(2)}%`, 'success');
+
             if (Math.abs(ratio - 0.5) > 0.1) {
-                toolLog('⚠ UNUSUAL LSB PATTERN DETECTED!', 'warning');
-                toolLog('This may indicate hidden data', 'warning');
+                toolLog('⚠ UNUSUAL PATTERN! Possible hidden data', 'warning');
             } else {
-                toolLog('LSB pattern appears normal', 'success');
+                toolLog('Pattern appears normal', 'success');
             }
         }
-        
-        function analyzeNoiseFloor() {
-            if (!audioBuffer) return;
-            
+
+        function analyzeNoise() {
+            if (!audioBuffer) {
+                toolLog('No audio buffer available', 'error');
+                return;
+            }
+
             toolLog('Analyzing noise floor...', 'success');
-            
-            const channelData = audioBuffer.getChannelData(0);
+
+            const data = audioBuffer.getChannelData(0);
             const windowSize = 4096;
-            let quietestRMS = Infinity;
-            let loudestRMS = 0;
-            
-            for (let i = 0; i < channelData.length - windowSize; i += windowSize) {
-                const window = channelData.slice(i, i + windowSize);
+            let minRMS = Infinity;
+            let maxRMS = 0;
+
+            for (let i = 0; i < data.length - windowSize; i += windowSize) {
+                const window = data.slice(i, i + windowSize);
                 const rms = Math.sqrt(window.reduce((sum, val) => sum + val * val, 0) / windowSize);
-                
-                if (rms < quietestRMS) quietestRMS = rms;
-                if (rms > loudestRMS) loudestRMS = rms;
+                if (rms < minRMS) minRMS = rms;
+                if (rms > maxRMS) maxRMS = rms;
             }
-            
-            const dynamicRange = 20 * Math.log10(loudestRMS / quietestRMS);
-            
-            toolLog(`Dynamic range: ${dynamicRange.toFixed(2)} dB`, 'success');
-            toolLog(`Noise floor: ${(quietestRMS * 100).toFixed(6)}`, 'success');
-            
-            if (quietestRMS > 0.001) {
-                toolLog('⚠ Elevated noise floor detected!', 'warning');
+
+            const dB = 20 * Math.log10(maxRMS / minRMS);
+            toolLog(`Dynamic range: ${dB.toFixed(2)} dB`, 'success');
+            toolLog(`Noise floor: ${(minRMS * 100).toFixed(6)}`, 'success');
+
+            if (minRMS > 0.001) {
+                toolLog('⚠ Elevated noise floor detected', 'warning');
             }
         }
-        
-        function extractMetadata() {
+
+        function showMetadata() {
             if (!audioFile) return;
-            
-            toolLog('=== FILE METADATA ===', 'success');
-            toolLog(`Filename: ${audioFile.name}`, 'success');
+
+            toolLog('=== METADATA ===', 'success');
+            toolLog(`File: ${audioFile.name}`, 'success');
             toolLog(`Size: ${(audioFile.size / 1024 / 1024).toFixed(2)} MB`, 'success');
             toolLog(`Type: ${audioFile.type}`, 'success');
             toolLog(`Modified: ${new Date(audioFile.lastModified).toLocaleString()}`, 'success');
@@ -903,23 +621,71 @@
                 toolLog(`Channels: ${audioBuffer.numberOfChannels}`, 'success');
             }
         }
-        
-        function log(message, type = '') {
-            const logElement = document.getElementById('log');
-            const logLine = document.createElement('div');
-            logLine.className = `log-line ${type}`;
-            logLine.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logElement.appendChild(logLine);
-            logElement.scrollTop = logElement.scrollHeight;
+
+        function downloadViz() {
+            const canvas = document.getElementById('canvas');
+            const link = document.createElement('a');
+            link.download = `gboy_${vizMode}_${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            toolLog('Image saved!', 'success');
         }
-        
+
+        // UTILITIES
+        function log(elementId, message, type = '') {
+            const el = document.getElementById(elementId);
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            el.appendChild(div);
+            el.scrollTop = el.scrollHeight;
+        }
+
         function toolLog(message, type = '') {
-            const logElement = document.getElementById('toolsLog');
-            const logLine = document.createElement('div');
-            logLine.className = `log-line ${type}`;
-            logLine.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logElement.appendChild(logLine);
-            logElement.scrollTop = logElement.scrollHeight;
+            log('toolsLog', message, type);
+        }
+
+        function bufferToWave(buffer) {
+            const length = buffer.length * buffer.numberOfChannels * 2 + 44;
+            const arrayBuffer = new ArrayBuffer(length);
+            const view = new DataView(arrayBuffer);
+            const channels = [];
+            let pos = 0;
+
+            // WAV header
+            const setUint16 = (data) => { view.setUint16(pos, data, true); pos += 2; };
+            const setUint32 = (data) => { view.setUint32(pos, data, true); pos += 4; };
+
+            setUint32(0x46464952); // "RIFF"
+            setUint32(length - 8);
+            setUint32(0x45564157); // "WAVE"
+            setUint32(0x20746d66); // "fmt "
+            setUint32(16);
+            setUint16(1);
+            setUint16(buffer.numberOfChannels);
+            setUint32(buffer.sampleRate);
+            setUint32(buffer.sampleRate * 2 * buffer.numberOfChannels);
+            setUint16(buffer.numberOfChannels * 2);
+            setUint16(16);
+            setUint32(0x61746164); // "data"
+            setUint32(length - pos - 4);
+
+            for (let i = 0; i < buffer.numberOfChannels; i++) {
+                channels.push(buffer.getChannelData(i));
+            }
+
+            let offset = 0;
+            while (pos < length) {
+                for (let i = 0; i < buffer.numberOfChannels; i++) {
+                    let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                    view.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+
+            return arrayBuffer;
         }
     </script>
 </body>
