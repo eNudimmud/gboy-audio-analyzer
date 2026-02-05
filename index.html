@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G*BOY Audio Analyzer v1.0 [NEUKO-AI]</title>
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
+    <title>G*BOY Audio Analyzer v2.0 [NEUKO-AI]</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap');
         
@@ -20,7 +19,6 @@
             --crt-dark: #001100;
             --crt-glow: #00ff0044;
             --scanline: rgba(0, 255, 0, 0.05);
-            --pixel-size: 2px;
         }
         
         body {
@@ -32,7 +30,6 @@
             line-height: 1.4;
         }
         
-        /* CRT Screen Effect */
         .crt-container {
             background: var(--crt-dark);
             min-height: 100vh;
@@ -47,7 +44,6 @@
             100% { opacity: 0.98; }
         }
         
-        /* Scanlines */
         .crt-container::before {
             content: "";
             position: fixed;
@@ -66,7 +62,6 @@
             z-index: 999;
         }
         
-        /* CRT Glow */
         .crt-container::after {
             content: "";
             position: fixed;
@@ -107,7 +102,7 @@
             border: 3px solid var(--crt-green);
             padding: 20px;
             margin: 20px auto;
-            max-width: 1200px;
+            max-width: 1400px;
             background: rgba(0, 17, 0, 0.8);
             box-shadow: 0 0 20px var(--crt-glow), inset 0 0 20px var(--crt-glow);
         }
@@ -179,12 +174,18 @@
             color: #000;
         }
         
+        .btn.active {
+            background: var(--crt-green);
+            color: var(--crt-dark);
+        }
+        
         .controls {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             margin: 20px 0;
             justify-content: center;
+            align-items: center;
         }
         
         canvas {
@@ -193,6 +194,7 @@
             background: #000;
             margin: 10px 0;
             box-shadow: 0 0 15px var(--crt-glow);
+            image-rendering: pixelated;
         }
         
         .analysis-output {
@@ -201,7 +203,7 @@
             padding: 15px;
             margin: 10px 0;
             font-size: 16px;
-            max-height: 400px;
+            max-height: 300px;
             overflow-y: auto;
             font-family: 'VT323', monospace;
         }
@@ -244,7 +246,7 @@
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
             margin: 20px 0;
         }
@@ -262,36 +264,20 @@
         }
         
         .stat-value {
-            font-size: 24px;
+            font-size: 20px;
             color: var(--crt-green);
             font-family: 'Press Start 2P', monospace;
         }
         
-        .progress-bar {
+        .hidden {
+            display: none;
+        }
+        
+        audio, video {
             width: 100%;
-            height: 20px;
-            border: 2px solid var(--crt-green);
-            background: var(--crt-dark);
             margin: 10px 0;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: var(--crt-green);
-            width: 0%;
-            transition: width 0.3s;
-            box-shadow: 0 0 10px var(--crt-glow);
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            border-top: 2px solid var(--crt-green);
-            font-size: 14px;
-            color: var(--crt-amber);
+            border: 2px solid var(--crt-green);
+            background: #000;
         }
         
         .blinking {
@@ -303,17 +289,17 @@
             50%, 100% { opacity: 0; }
         }
         
-        .tab-container {
+        .visualization-mode {
             display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
+            gap: 10px;
             flex-wrap: wrap;
+            margin: 15px 0;
         }
         
-        .tab {
+        .mode-btn {
             font-family: 'VT323', monospace;
             font-size: 18px;
-            padding: 10px 15px;
+            padding: 8px 15px;
             background: transparent;
             color: var(--crt-green);
             border: 2px solid var(--crt-green);
@@ -321,27 +307,9 @@
             transition: all 0.3s;
         }
         
-        .tab.active {
+        .mode-btn.active {
             background: var(--crt-green);
             color: var(--crt-dark);
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.5s;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        audio {
-            width: 100%;
-            margin: 10px 0;
         }
         
         select, input[type="range"] {
@@ -351,11 +319,15 @@
             color: var(--crt-green);
             border: 2px solid var(--crt-green);
             padding: 5px;
-            margin: 5px;
         }
         
-        input[type="range"] {
-            width: 200px;
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            border-top: 2px solid var(--crt-green);
+            font-size: 14px;
+            color: var(--crt-amber);
         }
     </style>
 </head>
@@ -363,7 +335,7 @@
     <div class="crt-container">
         <div class="header">
             <h1>G*BOY AUDIO ANALYZER</h1>
-            <div class="subtitle">NEUKO-AI | STEGANOGRAPHY DETECTION SYSTEM v1.0</div>
+            <div class="subtitle">NEUKO-AI | REAL-TIME ANALYSIS v2.0</div>
             <div style="font-size: 14px; margin-top: 10px;">
                 <span class="blinking">▊</span> SYSTEM READY <span class="blinking">▊</span>
             </div>
@@ -383,116 +355,74 @@
                 </button>
             </div>
 
-            <div id="fileInfo" class="analysis-output hidden">
-                <div class="log-line success">FILE LOADED SUCCESSFULLY</div>
-            </div>
-
+            <div id="fileInfo" class="analysis-output hidden"></div>
+            
             <audio id="audioPlayer" controls class="hidden"></audio>
-            <video id="videoPlayer" controls class="hidden" style="width: 100%; max-height: 400px; margin: 10px 0; border: 2px solid var(--crt-green);"></video>
+            <video id="videoPlayer" controls class="hidden"></video>
         </div>
 
         <div id="analysisSection" class="terminal-box hidden">
-            <div class="section-title">&gt; ANALYSIS MODULES</div>
+            <div class="section-title">&gt; REAL-TIME VISUALIZATION</div>
             
-            <div class="tab-container">
-                <button class="tab active" data-tab="spectrogram">SPECTROGRAM</button>
-                <button class="tab" data-tab="waveform">WAVEFORM</button>
-                <button class="tab" data-tab="frequency">FREQUENCY</button>
-                <button class="tab" data-tab="steganography">STEGANOGRAPHY</button>
-                <button class="tab" data-tab="metadata">METADATA</button>
-                <button class="tab" data-tab="effects">AUDIO EFFECTS</button>
+            <div class="visualization-mode">
+                <button class="mode-btn active" onclick="setVisualizationMode('spectrogram')">SPECTROGRAM</button>
+                <button class="mode-btn" onclick="setVisualizationMode('waveform')">WAVEFORM</button>
+                <button class="mode-btn" onclick="setVisualizationMode('frequency')">FREQUENCY</button>
+                <button class="mode-btn" onclick="setVisualizationMode('oscilloscope')">OSCILLOSCOPE</button>
             </div>
+            
+            <div class="controls">
+                <button class="btn" id="playBtn" onclick="togglePlayback()">▶ PLAY</button>
+                <button class="btn amber" onclick="stopPlayback()">■ STOP</button>
+                <button class="btn" onclick="downloadCanvas()">💾 SAVE IMAGE</button>
+                <label style="color: var(--crt-amber);">
+                    Speed: 
+                    <select id="playbackRate" onchange="changePlaybackRate()">
+                        <option value="0.25">0.25x</option>
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1" selected>1.0x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2">2.0x</option>
+                    </select>
+                </label>
+            </div>
+            
+            <canvas id="visualizationCanvas" width="1400" height="600"></canvas>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">PLAYBACK TIME</div>
+                    <div class="stat-value" id="currentTime" style="font-size: 16px;">00:00.0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">PEAK FREQUENCY</div>
+                    <div class="stat-value" id="peakFreq" style="font-size: 16px;">-- Hz</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">AMPLITUDE</div>
+                    <div class="stat-value" id="amplitude" style="font-size: 16px;">--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">MODE</div>
+                    <div class="stat-value" id="modeDisplay" style="font-size: 16px;">SPECTROGRAM</div>
+                </div>
+            </div>
+            
+            <div class="analysis-output" id="log"></div>
+        </div>
 
-            <!-- SPECTROGRAM TAB -->
-            <div class="tab-content active" id="spectrogram-content">
-                <div class="controls">
-                    <button class="btn" onclick="generateSpectrogram()">GENERATE SPECTROGRAM</button>
-                    <button class="btn amber" onclick="downloadCanvas('spectrogramCanvas')">DOWNLOAD IMAGE</button>
-                </div>
-                <div class="progress-bar hidden" id="spectrogramProgress">
-                    <div class="progress-fill"></div>
-                </div>
-                <canvas id="spectrogramCanvas" width="1024" height="512"></canvas>
-                <div class="analysis-output" id="spectrogramLog"></div>
+        <div id="toolsSection" class="terminal-box hidden">
+            <div class="section-title">&gt; ANALYSIS TOOLS</div>
+            
+            <div class="controls">
+                <button class="btn" onclick="reverseAudio()">🔄 REVERSE AUDIO</button>
+                <button class="btn" onclick="detectLSB()">🔍 LSB ANALYSIS</button>
+                <button class="btn" onclick="analyzeNoiseFloor()">📊 NOISE FLOOR</button>
+                <button class="btn" onclick="extractMetadata()">📝 METADATA</button>
             </div>
-
-            <!-- WAVEFORM TAB -->
-            <div class="tab-content" id="waveform-content">
-                <div class="controls">
-                    <button class="btn" onclick="generateWaveform()">GENERATE WAVEFORM</button>
-                    <button class="btn amber" onclick="downloadCanvas('waveformCanvas')">DOWNLOAD IMAGE</button>
-                </div>
-                <canvas id="waveformCanvas" width="1024" height="512"></canvas>
-                <div class="analysis-output" id="waveformLog"></div>
-            </div>
-
-            <!-- FREQUENCY TAB -->
-            <div class="tab-content" id="frequency-content">
-                <div class="controls">
-                    <button class="btn" onclick="analyzeFrequency()">ANALYZE FREQUENCIES</button>
-                    <label style="color: var(--crt-amber);">
-                        FFT Size:
-                        <select id="fftSize">
-                            <option value="256">256</option>
-                            <option value="512">512</option>
-                            <option value="1024" selected>1024</option>
-                            <option value="2048">2048</option>
-                            <option value="4096">4096</option>
-                        </select>
-                    </label>
-                </div>
-                <canvas id="frequencyCanvas" width="1024" height="512"></canvas>
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <div class="stat-label">PEAK FREQUENCY</div>
-                        <div class="stat-value" id="peakFreq">--</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">DOMINANT RANGE</div>
-                        <div class="stat-value" id="dominantRange">--</div>
-                    </div>
-                </div>
-                <div class="analysis-output" id="frequencyLog"></div>
-            </div>
-
-            <!-- STEGANOGRAPHY TAB -->
-            <div class="tab-content" id="steganography-content">
-                <div class="controls">
-                    <button class="btn" onclick="detectLSB()">DETECT LSB PATTERNS</button>
-                    <button class="btn" onclick="analyzeNoiseFloor()">ANALYZE NOISE FLOOR</button>
-                    <button class="btn" onclick="detectSSTV()">DETECT SSTV/MORSE</button>
-                </div>
-                <canvas id="lsbCanvas" width="1024" height="512"></canvas>
-                <div class="analysis-output" id="steganographyLog"></div>
-            </div>
-
-            <!-- METADATA TAB -->
-            <div class="tab-content" id="metadata-content">
-                <div class="controls">
-                    <button class="btn" onclick="extractMetadata()">EXTRACT METADATA</button>
-                </div>
-                <div class="analysis-output" id="metadataLog"></div>
-            </div>
-
-            <!-- EFFECTS TAB -->
-            <div class="tab-content" id="effects-content">
-                <div class="controls">
-                    <button class="btn" onclick="reverseAudio()">REVERSE AUDIO</button>
-                    <button class="btn" onclick="applySpeed(0.5)">SLOW 0.5x</button>
-                    <button class="btn" onclick="applySpeed(0.75)">SLOW 0.75x</button>
-                    <button class="btn" onclick="applySpeed(1.5)">FAST 1.5x</button>
-                    <button class="btn" onclick="applySpeed(2)">FAST 2x</button>
-                </div>
-                <div>
-                    <label style="color: var(--crt-amber);">
-                        Custom Speed:
-                        <input type="range" id="speedSlider" min="0.25" max="4" step="0.25" value="1">
-                        <span id="speedValue">1.0x</span>
-                    </label>
-                </div>
-                <audio id="effectsPlayer" controls class="hidden"></audio>
-                <div class="analysis-output" id="effectsLog"></div>
-            </div>
+            
+            <div class="analysis-output" id="toolsLog"></div>
         </div>
 
         <div class="footer">
@@ -501,7 +431,7 @@
                 Created for the NeukoAI ARG Community | Web3 Puzzle Solver
             </div>
             <div style="margin-top: 10px; font-size: 12px;">
-                &copy; 2025 | MIT License | Contribute on GitHub
+                &copy; 2025 | MIT License | github.com/eNudimmud/gboy-audio-analyzer
             </div>
         </div>
     </div>
@@ -510,10 +440,14 @@
         // Global variables
         let audioContext;
         let audioBuffer;
-        let audioFile;
         let audioSource;
-        let ffmpeg;
-        let ffmpegLoaded = false;
+        let analyser;
+        let isPlaying = false;
+        let visualizationMode = 'spectrogram';
+        let animationId;
+        let audioFile;
+        let startTime = 0;
+        let pauseTime = 0;
         
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -523,16 +457,17 @@
         
         function initAudioContext() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
+            analyser.smoothingTimeConstant = 0.8;
         }
         
         function setupEventListeners() {
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
             
-            // File input
             fileInput.addEventListener('change', handleFileSelect);
             
-            // Drag and drop
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropZone.classList.add('dragover');
@@ -550,16 +485,6 @@
                     handleFile(files[0]);
                 }
             });
-            
-            // Tabs
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-            });
-            
-            // Speed slider
-            document.getElementById('speedSlider').addEventListener('input', function() {
-                document.getElementById('speedValue').textContent = this.value + 'x';
-            });
         }
         
         function handleFileSelect(e) {
@@ -571,568 +496,324 @@
         
         async function handleFile(file) {
             audioFile = file;
-            log('fileInfo', `Loading file: ${file.name}`, 'success');
-            log('fileInfo', `Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, 'success');
-            log('fileInfo', `Type: ${file.type}`, 'success');
+            const isVideo = file.type.startsWith('video/');
+            
+            log(`Loading: ${file.name}`, 'success');
+            log(`Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, 'success');
+            log(`Type: ${file.type}`, 'success');
             
             document.getElementById('fileInfo').classList.remove('hidden');
             
-            // Check if it's a video file
-            const isVideo = file.type.startsWith('video/');
-            
-            if (isVideo) {
-                log('fileInfo', 'VIDEO FILE DETECTED - Extracting audio...', 'success');
-                await extractAudioFromVideo(file);
-            } else {
-                await loadAudioFile(file);
-            }
-        }
-        
-        async function extractAudioFromVideo(file) {
-            const videoPlayer = document.getElementById('videoPlayer');
-            const audioPlayer = document.getElementById('audioPlayer');
-            
-            // Show video player
-            videoPlayer.src = URL.createObjectURL(file);
-            videoPlayer.classList.remove('hidden');
-            audioPlayer.classList.add('hidden');
-            
-            return new Promise((resolve) => {
-                videoPlayer.onloadedmetadata = async () => {
-                    log('fileInfo', `Video Duration: ${videoPlayer.duration.toFixed(2)} seconds`, 'success');
-                    log('fileInfo', `Resolution: ${videoPlayer.videoWidth}x${videoPlayer.videoHeight}`, 'success');
-                    log('fileInfo', 'Extracting audio from video...', 'success');
-                    
-                    try {
-                        // Method 1: Use FileReader to get arrayBuffer and try to extract audio
-                        const arrayBuffer = await file.arrayBuffer();
-                        
-                        // Try to decode if browser can handle it
-                        try {
-                            audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
-                            log('fileInfo', 'Audio extracted successfully!', 'success');
-                        } catch (e) {
-                            // If direct decoding fails, create a workaround
-                            log('fileInfo', 'Creating audio buffer from video timeline...', 'warning');
-                            
-                            // Create buffer based on video duration
-                            const duration = videoPlayer.duration;
-                            const sampleRate = audioContext.sampleRate;
-                            audioBuffer = audioContext.createBuffer(2, duration * sampleRate, sampleRate);
-                            
-                            // Setup real-time capture from video
-                            try {
-                                const mediaStream = videoPlayer.captureStream ? videoPlayer.captureStream() : videoPlayer.mozCaptureStream();
-                                const source = audioContext.createMediaStreamSource(mediaStream);
-                                const analyser = audioContext.createAnalyser();
-                                const processor = audioContext.createScriptProcessor(2048, 1, 1);
-                                
-                                analyser.fftSize = 2048;
-                                source.connect(analyser);
-                                analyser.connect(processor);
-                                processor.connect(audioContext.destination);
-                                
-                                let capturedSamples = [];
-                                let capturing = false;
-                                
-                                processor.onaudioprocess = function(e) {
-                                    if (capturing) {
-                                        const inputData = e.inputBuffer.getChannelData(0);
-                                        capturedSamples.push(...inputData);
-                                    }
-                                };
-                                
-                                // Capture button function
-                                window.captureVideoAudio = () => {
-                                    if (!capturing) {
-                                        capturing = true;
-                                        capturedSamples = [];
-                                        videoPlayer.currentTime = 0;
-                                        videoPlayer.play();
-                                        log('fileInfo', 'Recording video audio... play the video!', 'warning');
-                                    } else {
-                                        capturing = false;
-                                        videoPlayer.pause();
-                                        
-                                        // Create buffer from captured samples
-                                        const newBuffer = audioContext.createBuffer(1, capturedSamples.length, audioContext.sampleRate);
-                                        newBuffer.getChannelData(0).set(capturedSamples);
-                                        audioBuffer = newBuffer;
-                                        
-                                        log('fileInfo', `Captured ${(capturedSamples.length / audioContext.sampleRate).toFixed(2)}s of audio!`, 'success');
-                                    }
-                                };
-                                
-                                window.videoAudioSource = source;
-                                window.videoAnalyser = analyser;
-                                
-                                log('fileInfo', '✅ Real-time video audio capture ready!', 'success');
-                                log('fileInfo', 'TIP: Play the video to analyze its audio in real-time', 'warning');
-                            } catch (captureError) {
-                                log('fileInfo', 'Using video audio playback mode', 'warning');
-                            }
-                        }
-                        
-                        log('fileInfo', `Sample Rate: ${audioBuffer.sampleRate} Hz`, 'success');
-                        log('fileInfo', `Channels: ${audioBuffer.numberOfChannels}`, 'success');
-                        log('fileInfo', '✅ VIDEO LOADED - Analysis ready!', 'success');
-                        
-                        // Show analysis section
-                        document.getElementById('analysisSection').classList.remove('hidden');
-                        resolve();
-                        
-                    } catch (error) {
-                        log('fileInfo', `Error: ${error.message}`, 'error');
-                        log('fileInfo', 'Falling back to basic video mode', 'warning');
-                        
-                        const duration = videoPlayer.duration;
-                        const sampleRate = audioContext.sampleRate;
-                        audioBuffer = audioContext.createBuffer(2, duration * sampleRate, sampleRate);
-                        
-                        document.getElementById('analysisSection').classList.remove('hidden');
-                        resolve();
-                    }
-                };
+            try {
+                if (isVideo) {
+                    await loadVideoFile(file);
+                } else {
+                    await loadAudioFile(file);
+                }
                 
-                videoPlayer.onerror = () => {
-                    log('fileInfo', 'Error loading video, trying as audio...', 'warning');
-                    videoPlayer.classList.add('hidden');
-                    loadAudioFile(file).then(resolve);
-                };
-            });
+                document.getElementById('analysisSection').classList.remove('hidden');
+                document.getElementById('toolsSection').classList.remove('hidden');
+                
+                log('✅ FILE LOADED - Ready for real-time analysis!', 'success');
+                log('Click PLAY to start visualization', 'warning');
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
         }
         
         async function loadAudioFile(file) {
             const arrayBuffer = await file.arrayBuffer();
+            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
             
-            try {
-                audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                
-                log('fileInfo', `Duration: ${audioBuffer.duration.toFixed(2)} seconds`, 'success');
-                log('fileInfo', `Sample Rate: ${audioBuffer.sampleRate} Hz`, 'success');
-                log('fileInfo', `Channels: ${audioBuffer.numberOfChannels}`, 'success');
-                
-                // Setup audio player
-                const audioPlayer = document.getElementById('audioPlayer');
-                audioPlayer.src = URL.createObjectURL(file);
-                audioPlayer.classList.remove('hidden');
-                
-                // Show analysis section
-                document.getElementById('analysisSection').classList.remove('hidden');
-                
-                log('fileInfo', 'AUDIO READY FOR ANALYSIS', 'success');
-            } catch (error) {
-                log('fileInfo', `Error decoding audio: ${error.message}`, 'error');
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = URL.createObjectURL(file);
+            audioPlayer.classList.remove('hidden');
+            
+            log(`Duration: ${audioBuffer.duration.toFixed(2)}s`, 'success');
+            log(`Sample Rate: ${audioBuffer.sampleRate} Hz`, 'success');
+            log(`Channels: ${audioBuffer.numberOfChannels}`, 'success');
+        }
+        
+        async function loadVideoFile(file) {
+            const videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.src = URL.createObjectURL(file);
+            videoPlayer.classList.remove('hidden');
+            
+            return new Promise((resolve) => {
+                videoPlayer.onloadedmetadata = async () => {
+                    log(`Video: ${videoPlayer.videoWidth}x${videoPlayer.videoHeight}`, 'success');
+                    log(`Duration: ${videoPlayer.duration.toFixed(2)}s`, 'success');
+                    
+                    // Create buffer from video duration
+                    audioBuffer = audioContext.createBuffer(
+                        2,
+                        videoPlayer.duration * audioContext.sampleRate,
+                        audioContext.sampleRate
+                    );
+                    
+                    log('Video loaded - audio analysis ready', 'success');
+                    resolve();
+                };
+            });
+        }
+        
+        function togglePlayback() {
+            if (isPlaying) {
+                pausePlayback();
+            } else {
+                startPlayback();
             }
         }
         
-        function switchTab(tabName) {
-            // Update tabs
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-            
-            // Update content
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(`${tabName}-content`).classList.add('active');
-        }
-        
-        function log(elementId, message, type = '') {
-            const logElement = document.getElementById(elementId);
-            const logLine = document.createElement('div');
-            logLine.className = `log-line ${type}`;
-            logLine.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logElement.appendChild(logLine);
-            logElement.scrollTop = logElement.scrollHeight;
-        }
-        
-        function clearLog(elementId) {
-            document.getElementById(elementId).innerHTML = '';
-        }
-        
-        // SPECTROGRAM GENERATION
-        async function generateSpectrogram() {
+        function startPlayback() {
             if (!audioBuffer) {
-                alert('Please load an audio file first!');
+                alert('Please load a file first!');
                 return;
             }
             
-            clearLog('spectrogramLog');
-            log('spectrogramLog', 'Generating spectrogram...', 'success');
-            log('spectrogramLog', 'Audio playback will continue...', 'success');
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
             
-            const canvas = document.getElementById('spectrogramCanvas');
-            const ctx = canvas.getContext('2d');
-            const width = canvas.width;
-            const height = canvas.height;
+            // Stop previous source if exists
+            if (audioSource) {
+                try { audioSource.stop(); } catch(e) {}
+            }
             
-            // Clear canvas
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
+            // Create new source
+            audioSource = audioContext.createBufferSource();
+            audioSource.buffer = audioBuffer;
+            audioSource.connect(analyser);
+            analyser.connect(audioContext.destination);
             
-            const channelData = audioBuffer.getChannelData(0);
-            const fftSize = 2048;
-            const hopSize = fftSize / 4;
-            const numFrames = Math.floor((channelData.length - fftSize) / hopSize);
+            // Start from pause point or beginning
+            const offset = pauseTime || 0;
+            audioSource.start(0, offset);
+            startTime = audioContext.currentTime - offset;
             
-            log('spectrogramLog', `FFT Size: ${fftSize}`, 'success');
-            log('spectrogramLog', `Processing ${numFrames} frames...`, 'success');
+            isPlaying = true;
+            document.getElementById('playBtn').textContent = '⏸ PAUSE';
             
-            // Show progress bar
-            const progressBar = document.getElementById('spectrogramProgress');
-            const progressFill = progressBar.querySelector('.progress-fill');
-            progressBar.classList.remove('hidden');
+            // Start visualization
+            visualize();
             
-            // Create image data
-            const imageData = ctx.createImageData(width, height);
-            const data = imageData.data;
-            
-            // Process in chunks to avoid blocking
-            const chunkSize = 100;
-            let processedFrames = 0;
-            
-            for (let chunk = 0; chunk < numFrames; chunk += chunkSize) {
-                await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI updates
-                
-                const endFrame = Math.min(chunk + chunkSize, numFrames);
-                
-                for (let i = chunk; i < endFrame; i++) {
-                    const x = Math.floor((i / numFrames) * width);
-                    const start = i * hopSize;
-                    const frame = channelData.slice(start, start + fftSize);
-                    
-                    // Apply Hann window
-                    const windowed = frame.map((val, idx) => {
-                        return val * (0.5 - 0.5 * Math.cos(2 * Math.PI * idx / fftSize));
-                    });
-                    
-                    // Simple FFT approximation (for demo - real FFT would be better)
-                    const spectrum = computeFFT(windowed);
-                    
-                    // Draw frequency bins
-                    for (let j = 0; j < height; j++) {
-                        const freqIndex = Math.floor((j / height) * spectrum.length);
-                        const magnitude = spectrum[freqIndex] || 0;
-                        const intensity = Math.min(255, magnitude * 255);
-                        
-                        const pixelIndex = (j * width + x) * 4;
-                        data[pixelIndex] = 0;     // R
-                        data[pixelIndex + 1] = intensity; // G (green CRT)
-                        data[pixelIndex + 2] = 0; // B
-                        data[pixelIndex + 3] = 255; // A
-                    }
+            // Handle end
+            audioSource.onended = () => {
+                if (isPlaying) {
+                    stopPlayback();
                 }
-                
-                processedFrames = endFrame;
-                progressFill.style.width = `${(processedFrames / numFrames) * 100}%`;
-            }
+            };
             
-            ctx.putImageData(imageData, 0, 0);
-            progressBar.classList.add('hidden');
-            progressFill.style.width = '0%';
-            
-            log('spectrogramLog', 'Spectrogram generated!', 'success');
-            log('spectrogramLog', 'Look for patterns, text, or images in the visualization', 'warning');
+            log('Playback started', 'success');
         }
         
-        // WAVEFORM GENERATION
-        function generateWaveform() {
-            if (!audioBuffer) {
-                alert('Please load an audio file first!');
-                return;
+        function pausePlayback() {
+            if (audioSource) {
+                pauseTime = audioContext.currentTime - startTime;
+                audioSource.stop();
+                isPlaying = false;
+                document.getElementById('playBtn').textContent = '▶ PLAY';
+                cancelAnimationFrame(animationId);
+                log('Playback paused', 'warning');
             }
+        }
+        
+        function stopPlayback() {
+            if (audioSource) {
+                audioSource.stop();
+            }
+            isPlaying = false;
+            pauseTime = 0;
+            startTime = 0;
+            document.getElementById('playBtn').textContent = '▶ PLAY';
+            cancelAnimationFrame(animationId);
+            log('Playback stopped', 'warning');
+        }
+        
+        function changePlaybackRate() {
+            const rate = parseFloat(document.getElementById('playbackRate').value);
+            if (audioSource) {
+                audioSource.playbackRate.value = rate;
+                log(`Speed changed to ${rate}x`, 'success');
+            }
+        }
+        
+        function setVisualizationMode(mode) {
+            visualizationMode = mode;
+            document.getElementById('modeDisplay').textContent = mode.toUpperCase();
             
-            clearLog('waveformLog');
-            log('waveformLog', 'Generating waveform...', 'success');
+            // Update button states
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
             
-            const canvas = document.getElementById('waveformCanvas');
+            log(`Visualization mode: ${mode}`, 'success');
+        }
+        
+        function visualize() {
+            if (!isPlaying) return;
+            
+            const canvas = document.getElementById('visualizationCanvas');
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
             const height = canvas.height;
             
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            function draw() {
+                if (!isPlaying) return;
+                
+                animationId = requestAnimationFrame(draw);
+                
+                // Update time display
+                const currentTime = audioContext.currentTime - startTime;
+                const mins = Math.floor(currentTime / 60);
+                const secs = Math.floor(currentTime % 60);
+                const ms = Math.floor((currentTime % 1) * 10);
+                document.getElementById('currentTime').textContent = 
+                    `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${ms}`;
+                
+                if (visualizationMode === 'spectrogram') {
+                    drawSpectrogram(ctx, width, height, dataArray, bufferLength);
+                } else if (visualizationMode === 'waveform') {
+                    drawWaveform(ctx, width, height, dataArray, bufferLength);
+                } else if (visualizationMode === 'frequency') {
+                    drawFrequency(ctx, width, height, dataArray, bufferLength);
+                } else if (visualizationMode === 'oscilloscope') {
+                    drawOscilloscope(ctx, width, height, dataArray, bufferLength);
+                }
+            }
+            
+            draw();
+        }
+        
+        function drawSpectrogram(ctx, width, height, dataArray, bufferLength) {
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Shift existing data left
+            const imageData = ctx.getImageData(1, 0, width - 1, height);
+            ctx.putImageData(imageData, 0, 0);
+            
+            // Draw new column on right
+            for (let i = 0; i < height; i++) {
+                const index = Math.floor((i / height) * bufferLength);
+                const value = dataArray[index];
+                
+                // Green CRT color
+                const intensity = value;
+                ctx.fillStyle = `rgb(0, ${intensity}, 0)`;
+                ctx.fillRect(width - 1, height - i - 1, 1, 1);
+            }
+            
+            // Update peak frequency
+            const maxIndex = dataArray.indexOf(Math.max(...dataArray));
+            const peakFreq = (maxIndex / bufferLength) * (audioContext.sampleRate / 2);
+            document.getElementById('peakFreq').textContent = `${Math.round(peakFreq)} Hz`;
+            
+            // Update amplitude
+            const avgAmplitude = dataArray.reduce((a, b) => a + b) / bufferLength;
+            document.getElementById('amplitude').textContent = Math.round(avgAmplitude);
+        }
+        
+        function drawWaveform(ctx, width, height, dataArray, bufferLength) {
+            analyser.getByteTimeDomainData(dataArray);
+            
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, width, height);
             
-            const channelData = audioBuffer.getChannelData(0);
-            const step = Math.ceil(channelData.length / width);
-            const amp = height / 2;
-            
-            ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;
+            ctx.strokeStyle = '#00ff00';
             ctx.beginPath();
             
-            for (let i = 0; i < width; i++) {
-                const min = Math.min(...channelData.slice(i * step, (i + 1) * step));
-                const max = Math.max(...channelData.slice(i * step, (i + 1) * step));
+            const sliceWidth = width / bufferLength;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * height / 2;
                 
-                ctx.moveTo(i, (1 + min) * amp);
-                ctx.lineTo(i, (1 + max) * amp);
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                
+                x += sliceWidth;
+            }
+            
+            ctx.lineTo(width, height / 2);
+            ctx.stroke();
+        }
+        
+        function drawFrequency(ctx, width, height, dataArray, bufferLength) {
+            analyser.getByteFrequencyData(dataArray);
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            
+            const barWidth = (width / bufferLength) * 2.5;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * height;
+                
+                ctx.fillStyle = `rgb(0, ${dataArray[i]}, 0)`;
+                ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+                
+                x += barWidth + 1;
+            }
+        }
+        
+        function drawOscilloscope(ctx, width, height, dataArray, bufferLength) {
+            analyser.getByteTimeDomainData(dataArray);
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#00ff00';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00ff00';
+            
+            ctx.beginPath();
+            
+            const sliceWidth = width / bufferLength;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * height / 2;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                
+                x += sliceWidth;
             }
             
             ctx.stroke();
-            log('waveformLog', 'Waveform generated!', 'success');
+            ctx.shadowBlur = 0;
         }
         
-        // FREQUENCY ANALYSIS
-        function analyzeFrequency() {
-            if (!audioBuffer) {
-                alert('Please load an audio file first!');
-                return;
-            }
-            
-            clearLog('frequencyLog');
-            log('frequencyLog', 'Analyzing frequency spectrum...', 'success');
-            
-            const fftSize = parseInt(document.getElementById('fftSize').value);
-            const channelData = audioBuffer.getChannelData(0);
-            
-            // Take a sample from the middle
-            const sampleStart = Math.floor(channelData.length / 2);
-            const sample = channelData.slice(sampleStart, sampleStart + fftSize);
-            
-            // Apply window
-            const windowed = sample.map((val, idx) => {
-                return val * (0.5 - 0.5 * Math.cos(2 * Math.PI * idx / fftSize));
-            });
-            
-            const spectrum = computeFFT(windowed);
-            
-            // Draw spectrum
-            const canvas = document.getElementById('frequencyCanvas');
-            const ctx = canvas.getContext('2d');
-            const width = canvas.width;
-            const height = canvas.height;
-            
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
-            
-            ctx.fillStyle = '#00ff00';
-            const barWidth = width / spectrum.length;
-            
-            for (let i = 0; i < spectrum.length; i++) {
-                const barHeight = spectrum[i] * height;
-                ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
-            }
-            
-            // Find peak frequency
-            let maxMag = 0;
-            let maxIndex = 0;
-            spectrum.forEach((mag, idx) => {
-                if (mag > maxMag) {
-                    maxMag = mag;
-                    maxIndex = idx;
-                }
-            });
-            
-            const peakFreq = (maxIndex / spectrum.length) * (audioBuffer.sampleRate / 2);
-            document.getElementById('peakFreq').textContent = `${peakFreq.toFixed(0)} Hz`;
-            
-            // Analyze frequency ranges
-            const ranges = {
-                'Sub-bass': [20, 60],
-                'Bass': [60, 250],
-                'Low-mid': [250, 500],
-                'Mid': [500, 2000],
-                'High-mid': [2000, 4000],
-                'High': [4000, 20000]
-            };
-            
-            let dominantRange = '';
-            let maxRangeEnergy = 0;
-            
-            for (const [name, [low, high]] of Object.entries(ranges)) {
-                const lowIdx = Math.floor((low / (audioBuffer.sampleRate / 2)) * spectrum.length);
-                const highIdx = Math.floor((high / (audioBuffer.sampleRate / 2)) * spectrum.length);
-                const rangeEnergy = spectrum.slice(lowIdx, highIdx).reduce((a, b) => a + b, 0);
-                
-                if (rangeEnergy > maxRangeEnergy) {
-                    maxRangeEnergy = rangeEnergy;
-                    dominantRange = name;
-                }
-            }
-            
-            document.getElementById('dominantRange').textContent = dominantRange;
-            
-            log('frequencyLog', `Peak frequency: ${peakFreq.toFixed(0)} Hz`, 'success');
-            log('frequencyLog', `Dominant range: ${dominantRange}`, 'success');
-            log('frequencyLog', 'Check for unusual frequency patterns or hidden tones', 'warning');
+        function downloadCanvas() {
+            const canvas = document.getElementById('visualizationCanvas');
+            const link = document.createElement('a');
+            link.download = `gboy_${visualizationMode}_${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            log('Image saved!', 'success');
         }
         
-        // LSB STEGANOGRAPHY DETECTION
-        function detectLSB() {
-            if (!audioBuffer) {
-                alert('Please load an audio file first!');
-                return;
-            }
-            
-            clearLog('steganographyLog');
-            log('steganographyLog', 'Analyzing LSB patterns...', 'success');
-            
-            const canvas = document.getElementById('lsbCanvas');
-            const ctx = canvas.getContext('2d');
-            const width = canvas.width;
-            const height = canvas.height;
-            
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
-            
-            const channelData = audioBuffer.getChannelData(0);
-            const imageData = ctx.createImageData(width, height);
-            const data = imageData.data;
-            
-            // Extract LSBs and visualize
-            for (let i = 0; i < Math.min(width * height, channelData.length); i++) {
-                const sample = channelData[i];
-                const intSample = Math.floor(sample * 32768); // Convert to 16-bit
-                const lsb = intSample & 1; // Get least significant bit
-                
-                const pixelIndex = i * 4;
-                const value = lsb * 255;
-                
-                data[pixelIndex] = 0;
-                data[pixelIndex + 1] = value;
-                data[pixelIndex + 2] = 0;
-                data[pixelIndex + 3] = 255;
-            }
-            
-            ctx.putImageData(imageData, 0, 0);
-            
-            // Calculate bit randomness
-            let ones = 0;
-            for (let i = 0; i < Math.min(10000, channelData.length); i++) {
-                const sample = channelData[i];
-                const intSample = Math.floor(sample * 32768);
-                if ((intSample & 1) === 1) ones++;
-            }
-            
-            const ratio = ones / Math.min(10000, channelData.length);
-            
-            log('steganographyLog', `LSB distribution: ${(ratio * 100).toFixed(2)}% ones`, 'success');
-            
-            if (Math.abs(ratio - 0.5) > 0.1) {
-                log('steganographyLog', '⚠ UNUSUAL LSB PATTERN DETECTED!', 'warning');
-                log('steganographyLog', 'This may indicate hidden data', 'warning');
-            } else {
-                log('steganographyLog', 'LSB pattern appears normal', 'success');
-            }
-        }
-        
-        // NOISE FLOOR ANALYSIS
-        function analyzeNoiseFloor() {
-            if (!audioBuffer) {
-                alert('Please load an audio file first!');
-                return;
-            }
-            
-            log('steganographyLog', 'Analyzing noise floor...', 'success');
-            
-            const channelData = audioBuffer.getChannelData(0);
-            
-            // Find quiet sections
-            const windowSize = 4096;
-            let quietestRMS = Infinity;
-            let loudestRMS = 0;
-            
-            for (let i = 0; i < channelData.length - windowSize; i += windowSize) {
-                const window = channelData.slice(i, i + windowSize);
-                const rms = Math.sqrt(window.reduce((sum, val) => sum + val * val, 0) / windowSize);
-                
-                if (rms < quietestRMS) quietestRMS = rms;
-                if (rms > loudestRMS) loudestRMS = rms;
-            }
-            
-            const dynamicRange = 20 * Math.log10(loudestRMS / quietestRMS);
-            
-            log('steganographyLog', `Dynamic range: ${dynamicRange.toFixed(2)} dB`, 'success');
-            log('steganographyLog', `Noise floor: ${(quietestRMS * 100).toFixed(6)}`, 'success');
-            
-            if (quietestRMS > 0.001) {
-                log('steganographyLog', '⚠ Elevated noise floor detected!', 'warning');
-                log('steganographyLog', 'This could indicate data hiding', 'warning');
-            }
-        }
-        
-        // SSTV/MORSE DETECTION
-        function detectSSTV() {
-            if (!audioBuffer) {
-                alert('Please load an audio file first!');
-                return;
-            }
-            
-            log('steganographyLog', 'Scanning for SSTV/Morse patterns...', 'success');
-            
-            const channelData = audioBuffer.getChannelData(0);
-            const sampleRate = audioBuffer.sampleRate;
-            
-            // Look for SSTV calibration header (1900Hz, 1500Hz, 1900Hz, 1500Hz pattern)
-            const targetFreqs = [1900, 1500, 1900, 1500, 2300, 1200];
-            let sstvDetected = false;
-            
-            // Simple frequency detection
-            for (let i = 0; i < channelData.length - sampleRate; i += sampleRate / 10) {
-                const chunk = channelData.slice(i, i + sampleRate / 10);
-                const spectrum = computeFFT(chunk);
-                const peakIdx = spectrum.indexOf(Math.max(...spectrum));
-                const peakFreq = (peakIdx / spectrum.length) * (sampleRate / 2);
-                
-                for (const freq of targetFreqs) {
-                    if (Math.abs(peakFreq - freq) < 50) {
-                        sstvDetected = true;
-                        break;
-                    }
-                }
-            }
-            
-            if (sstvDetected) {
-                log('steganographyLog', '⚠ POSSIBLE SSTV SIGNAL DETECTED!', 'warning');
-                log('steganographyLog', 'Use specialized SSTV decoder software', 'warning');
-            } else {
-                log('steganographyLog', 'No SSTV patterns detected', 'success');
-            }
-            
-            // Morse detection (look for on/off patterns)
-            log('steganographyLog', 'Checking for Morse code patterns...', 'success');
-            log('steganographyLog', 'Manual inspection recommended for Morse', 'warning');
-        }
-        
-        // METADATA EXTRACTION
-        function extractMetadata() {
-            if (!audioFile) {
-                alert('Please load an audio file first!');
-                return;
-            }
-            
-            clearLog('metadataLog');
-            log('metadataLog', 'Extracting metadata...', 'success');
-            
-            log('metadataLog', `Filename: ${audioFile.name}`, 'success');
-            log('metadataLog', `File size: ${(audioFile.size / 1024 / 1024).toFixed(2)} MB`, 'success');
-            log('metadataLog', `MIME type: ${audioFile.type}`, 'success');
-            log('metadataLog', `Last modified: ${new Date(audioFile.lastModified).toLocaleString()}`, 'success');
-            
-            if (audioBuffer) {
-                log('metadataLog', `Duration: ${audioBuffer.duration.toFixed(2)} seconds`, 'success');
-                log('metadataLog', `Sample rate: ${audioBuffer.sampleRate} Hz`, 'success');
-                log('metadataLog', `Channels: ${audioBuffer.numberOfChannels}`, 'success');
-                log('metadataLog', `Bit depth: 32-bit float (decoded)`, 'success');
-            }
-            
-            log('metadataLog', '⚠ Note: Advanced ID3/EXIF extraction requires specialized libraries', 'warning');
-            log('metadataLog', 'Check file properties manually for hidden tags', 'warning');
-        }
-        
-        // AUDIO EFFECTS
+        // TOOLS
         function reverseAudio() {
-            if (!audioBuffer) {
-                alert('Please load an audio file first!');
-                return;
-            }
+            if (!audioBuffer) return;
             
-            clearLog('effectsLog');
-            log('effectsLog', 'Reversing audio...', 'success');
+            toolLog('Reversing audio...', 'success');
             
             const reversed = audioContext.createBuffer(
                 audioBuffer.numberOfChannels,
@@ -1149,139 +830,96 @@
                 }
             }
             
-            playModifiedAudio(reversed);
-            log('effectsLog', 'Audio reversed! Listen for hidden messages', 'success');
+            audioBuffer = reversed;
+            toolLog('Audio reversed! Click PLAY to hear it', 'success');
         }
         
-        function applySpeed(rate) {
-            if (!audioBuffer) {
-                alert('Please load an audio file first!');
-                return;
+        function detectLSB() {
+            if (!audioBuffer) return;
+            
+            toolLog('Analyzing LSB patterns...', 'success');
+            
+            const channelData = audioBuffer.getChannelData(0);
+            let ones = 0;
+            const sampleSize = Math.min(10000, channelData.length);
+            
+            for (let i = 0; i < sampleSize; i++) {
+                const sample = channelData[i];
+                const intSample = Math.floor(sample * 32768);
+                if ((intSample & 1) === 1) ones++;
             }
             
-            clearLog('effectsLog');
-            log('effectsLog', `Applying ${rate}x speed...`, 'success');
+            const ratio = ones / sampleSize;
+            toolLog(`LSB distribution: ${(ratio * 100).toFixed(2)}% ones`, 'success');
             
-            const player = document.getElementById('effectsPlayer');
-            player.playbackRate = rate;
-            
-            if (player.paused) {
-                player.src = URL.createObjectURL(audioFile);
-                player.classList.remove('hidden');
+            if (Math.abs(ratio - 0.5) > 0.1) {
+                toolLog('⚠ UNUSUAL LSB PATTERN DETECTED!', 'warning');
+                toolLog('This may indicate hidden data', 'warning');
+            } else {
+                toolLog('LSB pattern appears normal', 'success');
             }
-            
-            log('effectsLog', `Playing at ${rate}x speed`, 'success');
         }
         
-        function playModifiedAudio(buffer) {
-            const source = audioContext.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioContext.destination);
+        function analyzeNoiseFloor() {
+            if (!audioBuffer) return;
             
-            const player = document.getElementById('effectsPlayer');
+            toolLog('Analyzing noise floor...', 'success');
             
-            // Convert buffer to blob for player
-            const offlineContext = new OfflineAudioContext(
-                buffer.numberOfChannels,
-                buffer.length,
-                buffer.sampleRate
-            );
+            const channelData = audioBuffer.getChannelData(0);
+            const windowSize = 4096;
+            let quietestRMS = Infinity;
+            let loudestRMS = 0;
             
-            const offlineSource = offlineContext.createBufferSource();
-            offlineSource.buffer = buffer;
-            offlineSource.connect(offlineContext.destination);
-            offlineSource.start();
-            
-            offlineContext.startRendering().then(renderedBuffer => {
-                const wav = audioBufferToWav(renderedBuffer);
-                const blob = new Blob([wav], { type: 'audio/wav' });
-                player.src = URL.createObjectURL(blob);
-                player.classList.remove('hidden');
-            });
-        }
-        
-        // HELPER FUNCTIONS
-        function computeFFT(samples) {
-            // Simplified FFT for demo purposes
-            // In production, use a proper FFT library like fft.js
-            const N = samples.length;
-            const spectrum = new Array(N / 2).fill(0);
-            
-            for (let k = 0; k < N / 2; k++) {
-                let real = 0;
-                let imag = 0;
+            for (let i = 0; i < channelData.length - windowSize; i += windowSize) {
+                const window = channelData.slice(i, i + windowSize);
+                const rms = Math.sqrt(window.reduce((sum, val) => sum + val * val, 0) / windowSize);
                 
-                for (let n = 0; n < N; n++) {
-                    const angle = -2 * Math.PI * k * n / N;
-                    real += samples[n] * Math.cos(angle);
-                    imag += samples[n] * Math.sin(angle);
-                }
-                
-                spectrum[k] = Math.sqrt(real * real + imag * imag) / N;
+                if (rms < quietestRMS) quietestRMS = rms;
+                if (rms > loudestRMS) loudestRMS = rms;
             }
             
-            return spectrum;
-        }
-        
-        function audioBufferToWav(buffer) {
-            const length = buffer.length * buffer.numberOfChannels * 2 + 44;
-            const arrayBuffer = new ArrayBuffer(length);
-            const view = new DataView(arrayBuffer);
-            const channels = [];
-            let offset = 0;
-            let pos = 0;
+            const dynamicRange = 20 * Math.log10(loudestRMS / quietestRMS);
             
-            // Write WAV header
-            setUint32(0x46464952); // "RIFF"
-            setUint32(length - 8); // file length - 8
-            setUint32(0x45564157); // "WAVE"
+            toolLog(`Dynamic range: ${dynamicRange.toFixed(2)} dB`, 'success');
+            toolLog(`Noise floor: ${(quietestRMS * 100).toFixed(6)}`, 'success');
             
-            setUint32(0x20746d66); // "fmt " chunk
-            setUint32(16); // length = 16
-            setUint16(1); // PCM (uncompressed)
-            setUint16(buffer.numberOfChannels);
-            setUint32(buffer.sampleRate);
-            setUint32(buffer.sampleRate * 2 * buffer.numberOfChannels); // avg. bytes/sec
-            setUint16(buffer.numberOfChannels * 2); // block-align
-            setUint16(16); // 16-bit
-            
-            setUint32(0x61746164); // "data" - chunk
-            setUint32(length - pos - 4); // chunk length
-            
-            // Write interleaved data
-            for (let i = 0; i < buffer.numberOfChannels; i++) {
-                channels.push(buffer.getChannelData(i));
-            }
-            
-            while (pos < length) {
-                for (let i = 0; i < buffer.numberOfChannels; i++) {
-                    let sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                    sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-                    view.setInt16(pos, sample, true);
-                    pos += 2;
-                }
-                offset++;
-            }
-            
-            return arrayBuffer;
-            
-            function setUint16(data) {
-                view.setUint16(pos, data, true);
-                pos += 2;
-            }
-            
-            function setUint32(data) {
-                view.setUint32(pos, data, true);
-                pos += 4;
+            if (quietestRMS > 0.001) {
+                toolLog('⚠ Elevated noise floor detected!', 'warning');
             }
         }
         
-        function downloadCanvas(canvasId) {
-            const canvas = document.getElementById(canvasId);
-            const link = document.createElement('a');
-            link.download = `gboy_${canvasId}_${Date.now()}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
+        function extractMetadata() {
+            if (!audioFile) return;
+            
+            toolLog('=== FILE METADATA ===', 'success');
+            toolLog(`Filename: ${audioFile.name}`, 'success');
+            toolLog(`Size: ${(audioFile.size / 1024 / 1024).toFixed(2)} MB`, 'success');
+            toolLog(`Type: ${audioFile.type}`, 'success');
+            toolLog(`Modified: ${new Date(audioFile.lastModified).toLocaleString()}`, 'success');
+            
+            if (audioBuffer) {
+                toolLog(`Duration: ${audioBuffer.duration.toFixed(2)}s`, 'success');
+                toolLog(`Sample rate: ${audioBuffer.sampleRate} Hz`, 'success');
+                toolLog(`Channels: ${audioBuffer.numberOfChannels}`, 'success');
+            }
+        }
+        
+        function log(message, type = '') {
+            const logElement = document.getElementById('log');
+            const logLine = document.createElement('div');
+            logLine.className = `log-line ${type}`;
+            logLine.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logElement.appendChild(logLine);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function toolLog(message, type = '') {
+            const logElement = document.getElementById('toolsLog');
+            const logLine = document.createElement('div');
+            logLine.className = `log-line ${type}`;
+            logLine.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logElement.appendChild(logLine);
+            logElement.scrollTop = logElement.scrollHeight;
         }
     </script>
 </body>
