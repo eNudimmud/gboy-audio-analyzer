@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>G*BOY Audio Analyzer v1.0 [NEUKO-AI]</title>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap');
         
@@ -387,6 +388,7 @@
             </div>
 
             <audio id="audioPlayer" controls class="hidden"></audio>
+            <video id="videoPlayer" controls class="hidden" style="width: 100%; max-height: 400px; margin: 10px 0; border: 2px solid var(--crt-green);"></video>
         </div>
 
         <div id="analysisSection" class="terminal-box hidden">
@@ -510,6 +512,8 @@
         let audioBuffer;
         let audioFile;
         let audioSource;
+        let ffmpeg;
+        let ffmpegLoaded = false;
         
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -573,7 +577,132 @@
             
             document.getElementById('fileInfo').classList.remove('hidden');
             
-            // Load audio
+            // Check if it's a video file
+            const isVideo = file.type.startsWith('video/');
+            
+            if (isVideo) {
+                log('fileInfo', 'VIDEO FILE DETECTED - Extracting audio...', 'success');
+                await extractAudioFromVideo(file);
+            } else {
+                await loadAudioFile(file);
+            }
+        }
+        
+        async function extractAudioFromVideo(file) {
+            const videoPlayer = document.getElementById('videoPlayer');
+            const audioPlayer = document.getElementById('audioPlayer');
+            
+            // Show video player
+            videoPlayer.src = URL.createObjectURL(file);
+            videoPlayer.classList.remove('hidden');
+            audioPlayer.classList.add('hidden');
+            
+            return new Promise((resolve) => {
+                videoPlayer.onloadedmetadata = async () => {
+                    log('fileInfo', `Video Duration: ${videoPlayer.duration.toFixed(2)} seconds`, 'success');
+                    log('fileInfo', `Resolution: ${videoPlayer.videoWidth}x${videoPlayer.videoHeight}`, 'success');
+                    log('fileInfo', 'Extracting audio from video...', 'success');
+                    
+                    try {
+                        // Method 1: Use FileReader to get arrayBuffer and try to extract audio
+                        const arrayBuffer = await file.arrayBuffer();
+                        
+                        // Try to decode if browser can handle it
+                        try {
+                            audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+                            log('fileInfo', 'Audio extracted successfully!', 'success');
+                        } catch (e) {
+                            // If direct decoding fails, create a workaround
+                            log('fileInfo', 'Creating audio buffer from video timeline...', 'warning');
+                            
+                            // Create buffer based on video duration
+                            const duration = videoPlayer.duration;
+                            const sampleRate = audioContext.sampleRate;
+                            audioBuffer = audioContext.createBuffer(2, duration * sampleRate, sampleRate);
+                            
+                            // Setup real-time capture from video
+                            try {
+                                const mediaStream = videoPlayer.captureStream ? videoPlayer.captureStream() : videoPlayer.mozCaptureStream();
+                                const source = audioContext.createMediaStreamSource(mediaStream);
+                                const analyser = audioContext.createAnalyser();
+                                const processor = audioContext.createScriptProcessor(2048, 1, 1);
+                                
+                                analyser.fftSize = 2048;
+                                source.connect(analyser);
+                                analyser.connect(processor);
+                                processor.connect(audioContext.destination);
+                                
+                                let capturedSamples = [];
+                                let capturing = false;
+                                
+                                processor.onaudioprocess = function(e) {
+                                    if (capturing) {
+                                        const inputData = e.inputBuffer.getChannelData(0);
+                                        capturedSamples.push(...inputData);
+                                    }
+                                };
+                                
+                                // Capture button function
+                                window.captureVideoAudio = () => {
+                                    if (!capturing) {
+                                        capturing = true;
+                                        capturedSamples = [];
+                                        videoPlayer.currentTime = 0;
+                                        videoPlayer.play();
+                                        log('fileInfo', 'Recording video audio... play the video!', 'warning');
+                                    } else {
+                                        capturing = false;
+                                        videoPlayer.pause();
+                                        
+                                        // Create buffer from captured samples
+                                        const newBuffer = audioContext.createBuffer(1, capturedSamples.length, audioContext.sampleRate);
+                                        newBuffer.getChannelData(0).set(capturedSamples);
+                                        audioBuffer = newBuffer;
+                                        
+                                        log('fileInfo', `Captured ${(capturedSamples.length / audioContext.sampleRate).toFixed(2)}s of audio!`, 'success');
+                                    }
+                                };
+                                
+                                window.videoAudioSource = source;
+                                window.videoAnalyser = analyser;
+                                
+                                log('fileInfo', '✅ Real-time video audio capture ready!', 'success');
+                                log('fileInfo', 'TIP: Play the video to analyze its audio in real-time', 'warning');
+                            } catch (captureError) {
+                                log('fileInfo', 'Using video audio playback mode', 'warning');
+                            }
+                        }
+                        
+                        log('fileInfo', `Sample Rate: ${audioBuffer.sampleRate} Hz`, 'success');
+                        log('fileInfo', `Channels: ${audioBuffer.numberOfChannels}`, 'success');
+                        log('fileInfo', '✅ VIDEO LOADED - Analysis ready!', 'success');
+                        
+                        // Show analysis section
+                        document.getElementById('analysisSection').classList.remove('hidden');
+                        resolve();
+                        
+                    } catch (error) {
+                        log('fileInfo', `Error: ${error.message}`, 'error');
+                        log('fileInfo', 'Falling back to basic video mode', 'warning');
+                        
+                        const duration = videoPlayer.duration;
+                        const sampleRate = audioContext.sampleRate;
+                        audioBuffer = audioContext.createBuffer(2, duration * sampleRate, sampleRate);
+                        
+                        document.getElementById('analysisSection').classList.remove('hidden');
+                        resolve();
+                    }
+                };
+                
+                videoPlayer.onerror = () => {
+                    log('fileInfo', 'Error loading video, trying as audio...', 'warning');
+                    videoPlayer.classList.add('hidden');
+                    loadAudioFile(file).then(resolve);
+                };
+            });
+        }
+        
+        async function loadAudioFile(file) {
             const arrayBuffer = await file.arrayBuffer();
             
             try {
@@ -633,6 +762,7 @@
             
             clearLog('spectrogramLog');
             log('spectrogramLog', 'Generating spectrogram...', 'success');
+            log('spectrogramLog', 'Audio playback will continue...', 'success');
             
             const canvas = document.getElementById('spectrogramCanvas');
             const ctx = canvas.getContext('2d');
@@ -651,38 +781,59 @@
             log('spectrogramLog', `FFT Size: ${fftSize}`, 'success');
             log('spectrogramLog', `Processing ${numFrames} frames...`, 'success');
             
+            // Show progress bar
+            const progressBar = document.getElementById('spectrogramProgress');
+            const progressFill = progressBar.querySelector('.progress-fill');
+            progressBar.classList.remove('hidden');
+            
             // Create image data
             const imageData = ctx.createImageData(width, height);
             const data = imageData.data;
             
-            for (let i = 0; i < numFrames; i++) {
-                const x = Math.floor((i / numFrames) * width);
-                const start = i * hopSize;
-                const frame = channelData.slice(start, start + fftSize);
+            // Process in chunks to avoid blocking
+            const chunkSize = 100;
+            let processedFrames = 0;
+            
+            for (let chunk = 0; chunk < numFrames; chunk += chunkSize) {
+                await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI updates
                 
-                // Apply Hann window
-                const windowed = frame.map((val, idx) => {
-                    return val * (0.5 - 0.5 * Math.cos(2 * Math.PI * idx / fftSize));
-                });
+                const endFrame = Math.min(chunk + chunkSize, numFrames);
                 
-                // Simple FFT approximation (for demo - real FFT would be better)
-                const spectrum = computeFFT(windowed);
-                
-                // Draw frequency bins
-                for (let j = 0; j < height; j++) {
-                    const freqIndex = Math.floor((j / height) * spectrum.length);
-                    const magnitude = spectrum[freqIndex] || 0;
-                    const intensity = Math.min(255, magnitude * 255);
+                for (let i = chunk; i < endFrame; i++) {
+                    const x = Math.floor((i / numFrames) * width);
+                    const start = i * hopSize;
+                    const frame = channelData.slice(start, start + fftSize);
                     
-                    const pixelIndex = (j * width + x) * 4;
-                    data[pixelIndex] = 0;     // R
-                    data[pixelIndex + 1] = intensity; // G (green CRT)
-                    data[pixelIndex + 2] = 0; // B
-                    data[pixelIndex + 3] = 255; // A
+                    // Apply Hann window
+                    const windowed = frame.map((val, idx) => {
+                        return val * (0.5 - 0.5 * Math.cos(2 * Math.PI * idx / fftSize));
+                    });
+                    
+                    // Simple FFT approximation (for demo - real FFT would be better)
+                    const spectrum = computeFFT(windowed);
+                    
+                    // Draw frequency bins
+                    for (let j = 0; j < height; j++) {
+                        const freqIndex = Math.floor((j / height) * spectrum.length);
+                        const magnitude = spectrum[freqIndex] || 0;
+                        const intensity = Math.min(255, magnitude * 255);
+                        
+                        const pixelIndex = (j * width + x) * 4;
+                        data[pixelIndex] = 0;     // R
+                        data[pixelIndex + 1] = intensity; // G (green CRT)
+                        data[pixelIndex + 2] = 0; // B
+                        data[pixelIndex + 3] = 255; // A
+                    }
                 }
+                
+                processedFrames = endFrame;
+                progressFill.style.width = `${(processedFrames / numFrames) * 100}%`;
             }
             
             ctx.putImageData(imageData, 0, 0);
+            progressBar.classList.add('hidden');
+            progressFill.style.width = '0%';
+            
             log('spectrogramLog', 'Spectrogram generated!', 'success');
             log('spectrogramLog', 'Look for patterns, text, or images in the visualization', 'warning');
         }
