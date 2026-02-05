@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G*BOY Audio Analyzer v1.0 [NEUKO-AI]</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --crt-green: #00ff00;
+            --crt-amber: #ffb000;
+            --crt-dark: #001100;
+            --crt-glow: #00ff0044;
+            --scanline: rgba(0, 255, 0, 0.05);
+            --pixel-size: 2px;
+        }
+        
+        body {
+            font-family: 'VT323', monospace;
+            background: #000;
+            color: var(--crt-green);
+            overflow-x: hidden;
+            cursor: crosshair;
+            line-height: 1.4;
+        }
+        
+        /* CRT Screen Effect */
+        .crt-container {
+            background: var(--crt-dark);
+            min-height: 100vh;
+            position: relative;
+            padding: 20px;
+            animation: flicker 0.15s infinite;
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+        
+        /* Scanlines */
+        .crt-container::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                var(--scanline) 2px,
+                var(--scanline) 4px
+            );
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        /* CRT Glow */
+        .crt-container::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+            pointer-events: none;
+            z-index: 998;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px var(--crt-glow);
+        }
+        
+        .header h1 {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 24px;
+            margin-bottom: 10px;
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 5px var(--crt-glow), 0 0 10px var(--crt-glow); }
+            50% { text-shadow: 0 0 10px var(--crt-glow), 0 0 20px var(--crt-glow), 0 0 30px var(--crt-glow); }
+        }
+        
+        .header .subtitle {
+            font-size: 18px;
+            color: var(--crt-amber);
+            margin-top: 5px;
+        }
+        
+        .terminal-box {
+            border: 3px solid var(--crt-green);
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 1200px;
+            background: rgba(0, 17, 0, 0.8);
+            box-shadow: 0 0 20px var(--crt-glow), inset 0 0 20px var(--crt-glow);
+        }
+        
+        .section-title {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: var(--crt-amber);
+            border-bottom: 2px solid var(--crt-green);
+            padding-bottom: 10px;
+        }
+        
+        .file-input-area {
+            margin: 20px 0;
+            padding: 30px;
+            border: 2px dashed var(--crt-green);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(0, 255, 0, 0.05);
+        }
+        
+        .file-input-area:hover {
+            background: rgba(0, 255, 0, 0.1);
+            border-color: var(--crt-amber);
+        }
+        
+        .file-input-area.dragover {
+            background: rgba(255, 176, 0, 0.2);
+            border-color: var(--crt-amber);
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .btn {
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            padding: 10px 20px;
+            background: transparent;
+            color: var(--crt-green);
+            border: 2px solid var(--crt-green);
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            text-shadow: 0 0 5px var(--crt-glow);
+            box-shadow: 0 0 10px var(--crt-glow);
+        }
+        
+        .btn:hover {
+            background: var(--crt-green);
+            color: var(--crt-dark);
+            box-shadow: 0 0 20px var(--crt-glow);
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn.amber {
+            border-color: var(--crt-amber);
+            color: var(--crt-amber);
+        }
+        
+        .btn.amber:hover {
+            background: var(--crt-amber);
+            color: #000;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        canvas {
+            width: 100%;
+            border: 2px solid var(--crt-green);
+            background: #000;
+            margin: 10px 0;
+            box-shadow: 0 0 15px var(--crt-glow);
+        }
+        
+        .analysis-output {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--crt-green);
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'VT323', monospace;
+        }
+        
+        .analysis-output::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        .analysis-output::-webkit-scrollbar-track {
+            background: var(--crt-dark);
+        }
+        
+        .analysis-output::-webkit-scrollbar-thumb {
+            background: var(--crt-green);
+            border: 1px solid var(--crt-dark);
+        }
+        
+        .log-line {
+            margin: 5px 0;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .log-line.warning {
+            color: var(--crt-amber);
+        }
+        
+        .log-line.success {
+            color: #00ff00;
+        }
+        
+        .log-line.error {
+            color: #ff0000;
+            text-shadow: 0 0 5px #ff0000;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-box {
+            border: 2px solid var(--crt-green);
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        
+        .stat-label {
+            color: var(--crt-amber);
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            color: var(--crt-green);
+            font-family: 'Press Start 2P', monospace;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            border: 2px solid var(--crt-green);
+            background: var(--crt-dark);
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--crt-green);
+            width: 0%;
+            transition: width 0.3s;
+            box-shadow: 0 0 10px var(--crt-glow);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            border-top: 2px solid var(--crt-green);
+            font-size: 14px;
+            color: var(--crt-amber);
+        }
+        
+        .blinking {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+        
+        .tab-container {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            padding: 10px 15px;
+            background: transparent;
+            color: var(--crt-green);
+            border: 2px solid var(--crt-green);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: var(--crt-green);
+            color: var(--crt-dark);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        audio {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        select, input[type="range"] {
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            background: var(--crt-dark);
+            color: var(--crt-green);
+            border: 2px solid var(--crt-green);
+            padding: 5px;
+            margin: 5px;
+        }
+        
+        input[type="range"] {
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="crt-container">
+        <div class="header">
+            <h1>G*BOY AUDIO ANALYZER</h1>
+            <div class="subtitle">NEUKO-AI | STEGANOGRAPHY DETECTION SYSTEM v1.0</div>
+            <div style="font-size: 14px; margin-top: 10px;">
+                <span class="blinking">▊</span> SYSTEM READY <span class="blinking">▊</span>
+            </div>
+        </div>
+
+        <div class="terminal-box">
+            <div class="section-title">&gt; FILE UPLOAD MODULE</div>
+            
+            <div class="file-input-area" id="dropZone">
+                <div style="font-size: 24px; margin-bottom: 10px;">⬇ DROP AUDIO/VIDEO FILE HERE ⬇</div>
+                <div style="font-size: 18px; color: var(--crt-amber);">
+                    Supported: MP3, WAV, OGG, MP4, WEBM, AVI
+                </div>
+                <input type="file" id="fileInput" accept="audio/*,video/*">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">
+                    SELECT FILE
+                </button>
+            </div>
+
+            <div id="fileInfo" class="analysis-output hidden">
+                <div class="log-line success">FILE LOADED SUCCESSFULLY</div>
+            </div>
+
+            <audio id="audioPlayer" controls class="hidden"></audio>
+        </div>
+
+        <div id="analysisSection" class="terminal-box hidden">
+            <div class="section-title">&gt; ANALYSIS MODULES</div>
+            
+            <div class="tab-container">
+                <button class="tab active" data-tab="spectrogram">SPECTROGRAM</button>
+                <button class="tab" data-tab="waveform">WAVEFORM</button>
+                <button class="tab" data-tab="frequency">FREQUENCY</button>
+                <button class="tab" data-tab="steganography">STEGANOGRAPHY</button>
+                <button class="tab" data-tab="metadata">METADATA</button>
+                <button class="tab" data-tab="effects">AUDIO EFFECTS</button>
+            </div>
+
+            <!-- SPECTROGRAM TAB -->
+            <div class="tab-content active" id="spectrogram-content">
+                <div class="controls">
+                    <button class="btn" onclick="generateSpectrogram()">GENERATE SPECTROGRAM</button>
+                    <button class="btn amber" onclick="downloadCanvas('spectrogramCanvas')">DOWNLOAD IMAGE</button>
+                </div>
+                <div class="progress-bar hidden" id="spectrogramProgress">
+                    <div class="progress-fill"></div>
+                </div>
+                <canvas id="spectrogramCanvas" width="1024" height="512"></canvas>
+                <div class="analysis-output" id="spectrogramLog"></div>
+            </div>
+
+            <!-- WAVEFORM TAB -->
+            <div class="tab-content" id="waveform-content">
+                <div class="controls">
+                    <button class="btn" onclick="generateWaveform()">GENERATE WAVEFORM</button>
+                    <button class="btn amber" onclick="downloadCanvas('waveformCanvas')">DOWNLOAD IMAGE</button>
+                </div>
+                <canvas id="waveformCanvas" width="1024" height="512"></canvas>
+                <div class="analysis-output" id="waveformLog"></div>
+            </div>
+
+            <!-- FREQUENCY TAB -->
+            <div class="tab-content" id="frequency-content">
+                <div class="controls">
+                    <button class="btn" onclick="analyzeFrequency()">ANALYZE FREQUENCIES</button>
+                    <label style="color: var(--crt-amber);">
+                        FFT Size:
+                        <select id="fftSize">
+                            <option value="256">256</option>
+                            <option value="512">512</option>
+                            <option value="1024" selected>1024</option>
+                            <option value="2048">2048</option>
+                            <option value="4096">4096</option>
+                        </select>
+                    </label>
+                </div>
+                <canvas id="frequencyCanvas" width="1024" height="512"></canvas>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">PEAK FREQUENCY</div>
+                        <div class="stat-value" id="peakFreq">--</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">DOMINANT RANGE</div>
+                        <div class="stat-value" id="dominantRange">--</div>
+                    </div>
+                </div>
+                <div class="analysis-output" id="frequencyLog"></div>
+            </div>
+
+            <!-- STEGANOGRAPHY TAB -->
+            <div class="tab-content" id="steganography-content">
+                <div class="controls">
+                    <button class="btn" onclick="detectLSB()">DETECT LSB PATTERNS</button>
+                    <button class="btn" onclick="analyzeNoiseFloor()">ANALYZE NOISE FLOOR</button>
+                    <button class="btn" onclick="detectSSTV()">DETECT SSTV/MORSE</button>
+                </div>
+                <canvas id="lsbCanvas" width="1024" height="512"></canvas>
+                <div class="analysis-output" id="steganographyLog"></div>
+            </div>
+
+            <!-- METADATA TAB -->
+            <div class="tab-content" id="metadata-content">
+                <div class="controls">
+                    <button class="btn" onclick="extractMetadata()">EXTRACT METADATA</button>
+                </div>
+                <div class="analysis-output" id="metadataLog"></div>
+            </div>
+
+            <!-- EFFECTS TAB -->
+            <div class="tab-content" id="effects-content">
+                <div class="controls">
+                    <button class="btn" onclick="reverseAudio()">REVERSE AUDIO</button>
+                    <button class="btn" onclick="applySpeed(0.5)">SLOW 0.5x</button>
+                    <button class="btn" onclick="applySpeed(0.75)">SLOW 0.75x</button>
+                    <button class="btn" onclick="applySpeed(1.5)">FAST 1.5x</button>
+                    <button class="btn" onclick="applySpeed(2)">FAST 2x</button>
+                </div>
+                <div>
+                    <label style="color: var(--crt-amber);">
+                        Custom Speed:
+                        <input type="range" id="speedSlider" min="0.25" max="4" step="0.25" value="1">
+                        <span id="speedValue">1.0x</span>
+                    </label>
+                </div>
+                <audio id="effectsPlayer" controls class="hidden"></audio>
+                <div class="analysis-output" id="effectsLog"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>[ G*BOY AUDIO ANALYZER | OPEN SOURCE ]</div>
+            <div style="margin-top: 10px; font-size: 12px;">
+                Created for the NeukoAI ARG Community | Web3 Puzzle Solver
+            </div>
+            <div style="margin-top: 10px; font-size: 12px;">
+                &copy; 2025 | MIT License | Contribute on GitHub
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let audioContext;
+        let audioBuffer;
+        let audioFile;
+        let audioSource;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            initAudioContext();
+        });
+        
+        function initAudioContext() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        function setupEventListeners() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            
+            // File input
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // Drag and drop
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+            
+            // Tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+            });
+            
+            // Speed slider
+            document.getElementById('speedSlider').addEventListener('input', function() {
+                document.getElementById('speedValue').textContent = this.value + 'x';
+            });
+        }
+        
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+        
+        async function handleFile(file) {
+            audioFile = file;
+            log('fileInfo', `Loading file: ${file.name}`, 'success');
+            log('fileInfo', `Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, 'success');
+            log('fileInfo', `Type: ${file.type}`, 'success');
+            
+            document.getElementById('fileInfo').classList.remove('hidden');
+            
+            // Load audio
+            const arrayBuffer = await file.arrayBuffer();
+            
+            try {
+                audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                log('fileInfo', `Duration: ${audioBuffer.duration.toFixed(2)} seconds`, 'success');
+                log('fileInfo', `Sample Rate: ${audioBuffer.sampleRate} Hz`, 'success');
+                log('fileInfo', `Channels: ${audioBuffer.numberOfChannels}`, 'success');
+                
+                // Setup audio player
+                const audioPlayer = document.getElementById('audioPlayer');
+                audioPlayer.src = URL.createObjectURL(file);
+                audioPlayer.classList.remove('hidden');
+                
+                // Show analysis section
+                document.getElementById('analysisSection').classList.remove('hidden');
+                
+                log('fileInfo', 'AUDIO READY FOR ANALYSIS', 'success');
+            } catch (error) {
+                log('fileInfo', `Error decoding audio: ${error.message}`, 'error');
+            }
+        }
+        
+        function switchTab(tabName) {
+            // Update tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-content`).classList.add('active');
+        }
+        
+        function log(elementId, message, type = '') {
+            const logElement = document.getElementById(elementId);
+            const logLine = document.createElement('div');
+            logLine.className = `log-line ${type}`;
+            logLine.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logElement.appendChild(logLine);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+        
+        // SPECTROGRAM GENERATION
+        async function generateSpectrogram() {
+            if (!audioBuffer) {
+                alert('Please load an audio file first!');
+                return;
+            }
+            
+            clearLog('spectrogramLog');
+            log('spectrogramLog', 'Generating spectrogram...', 'success');
+            
+            const canvas = document.getElementById('spectrogramCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            
+            const channelData = audioBuffer.getChannelData(0);
+            const fftSize = 2048;
+            const hopSize = fftSize / 4;
+            const numFrames = Math.floor((channelData.length - fftSize) / hopSize);
+            
+            log('spectrogramLog', `FFT Size: ${fftSize}`, 'success');
+            log('spectrogramLog', `Processing ${numFrames} frames...`, 'success');
+            
+            // Create image data
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < numFrames; i++) {
+                const x = Math.floor((i / numFrames) * width);
+                const start = i * hopSize;
+                const frame = channelData.slice(start, start + fftSize);
+                
+                // Apply Hann window
+                const windowed = frame.map((val, idx) => {
+                    return val * (0.5 - 0.5 * Math.cos(2 * Math.PI * idx / fftSize));
+                });
+                
+                // Simple FFT approximation (for demo - real FFT would be better)
+                const spectrum = computeFFT(windowed);
+                
+                // Draw frequency bins
+                for (let j = 0; j < height; j++) {
+                    const freqIndex = Math.floor((j / height) * spectrum.length);
+                    const magnitude = spectrum[freqIndex] || 0;
+                    const intensity = Math.min(255, magnitude * 255);
+                    
+                    const pixelIndex = (j * width + x) * 4;
+                    data[pixelIndex] = 0;     // R
+                    data[pixelIndex + 1] = intensity; // G (green CRT)
+                    data[pixelIndex + 2] = 0; // B
+                    data[pixelIndex + 3] = 255; // A
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            log('spectrogramLog', 'Spectrogram generated!', 'success');
+            log('spectrogramLog', 'Look for patterns, text, or images in the visualization', 'warning');
+        }
+        
+        // WAVEFORM GENERATION
+        function generateWaveform() {
+            if (!audioBuffer) {
+                alert('Please load an audio file first!');
+                return;
+            }
+            
+            clearLog('waveformLog');
+            log('waveformLog', 'Generating waveform...', 'success');
+            
+            const canvas = document.getElementById('waveformCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            
+            const channelData = audioBuffer.getChannelData(0);
+            const step = Math.ceil(channelData.length / width);
+            const amp = height / 2;
+            
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            for (let i = 0; i < width; i++) {
+                const min = Math.min(...channelData.slice(i * step, (i + 1) * step));
+                const max = Math.max(...channelData.slice(i * step, (i + 1) * step));
+                
+                ctx.moveTo(i, (1 + min) * amp);
+                ctx.lineTo(i, (1 + max) * amp);
+            }
+            
+            ctx.stroke();
+            log('waveformLog', 'Waveform generated!', 'success');
+        }
+        
+        // FREQUENCY ANALYSIS
+        function analyzeFrequency() {
+            if (!audioBuffer) {
+                alert('Please load an audio file first!');
+                return;
+            }
+            
+            clearLog('frequencyLog');
+            log('frequencyLog', 'Analyzing frequency spectrum...', 'success');
+            
+            const fftSize = parseInt(document.getElementById('fftSize').value);
+            const channelData = audioBuffer.getChannelData(0);
+            
+            // Take a sample from the middle
+            const sampleStart = Math.floor(channelData.length / 2);
+            const sample = channelData.slice(sampleStart, sampleStart + fftSize);
+            
+            // Apply window
+            const windowed = sample.map((val, idx) => {
+                return val * (0.5 - 0.5 * Math.cos(2 * Math.PI * idx / fftSize));
+            });
+            
+            const spectrum = computeFFT(windowed);
+            
+            // Draw spectrum
+            const canvas = document.getElementById('frequencyCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.fillStyle = '#00ff00';
+            const barWidth = width / spectrum.length;
+            
+            for (let i = 0; i < spectrum.length; i++) {
+                const barHeight = spectrum[i] * height;
+                ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
+            }
+            
+            // Find peak frequency
+            let maxMag = 0;
+            let maxIndex = 0;
+            spectrum.forEach((mag, idx) => {
+                if (mag > maxMag) {
+                    maxMag = mag;
+                    maxIndex = idx;
+                }
+            });
+            
+            const peakFreq = (maxIndex / spectrum.length) * (audioBuffer.sampleRate / 2);
+            document.getElementById('peakFreq').textContent = `${peakFreq.toFixed(0)} Hz`;
+            
+            // Analyze frequency ranges
+            const ranges = {
+                'Sub-bass': [20, 60],
+                'Bass': [60, 250],
+                'Low-mid': [250, 500],
+                'Mid': [500, 2000],
+                'High-mid': [2000, 4000],
+                'High': [4000, 20000]
+            };
+            
+            let dominantRange = '';
+            let maxRangeEnergy = 0;
+            
+            for (const [name, [low, high]] of Object.entries(ranges)) {
+                const lowIdx = Math.floor((low / (audioBuffer.sampleRate / 2)) * spectrum.length);
+                const highIdx = Math.floor((high / (audioBuffer.sampleRate / 2)) * spectrum.length);
+                const rangeEnergy = spectrum.slice(lowIdx, highIdx).reduce((a, b) => a + b, 0);
+                
+                if (rangeEnergy > maxRangeEnergy) {
+                    maxRangeEnergy = rangeEnergy;
+                    dominantRange = name;
+                }
+            }
+            
+            document.getElementById('dominantRange').textContent = dominantRange;
+            
+            log('frequencyLog', `Peak frequency: ${peakFreq.toFixed(0)} Hz`, 'success');
+            log('frequencyLog', `Dominant range: ${dominantRange}`, 'success');
+            log('frequencyLog', 'Check for unusual frequency patterns or hidden tones', 'warning');
+        }
+        
+        // LSB STEGANOGRAPHY DETECTION
+        function detectLSB() {
+            if (!audioBuffer) {
+                alert('Please load an audio file first!');
+                return;
+            }
+            
+            clearLog('steganographyLog');
+            log('steganographyLog', 'Analyzing LSB patterns...', 'success');
+            
+            const canvas = document.getElementById('lsbCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            
+            const channelData = audioBuffer.getChannelData(0);
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+            
+            // Extract LSBs and visualize
+            for (let i = 0; i < Math.min(width * height, channelData.length); i++) {
+                const sample = channelData[i];
+                const intSample = Math.floor(sample * 32768); // Convert to 16-bit
+                const lsb = intSample & 1; // Get least significant bit
+                
+                const pixelIndex = i * 4;
+                const value = lsb * 255;
+                
+                data[pixelIndex] = 0;
+                data[pixelIndex + 1] = value;
+                data[pixelIndex + 2] = 0;
+                data[pixelIndex + 3] = 255;
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            
+            // Calculate bit randomness
+            let ones = 0;
+            for (let i = 0; i < Math.min(10000, channelData.length); i++) {
+                const sample = channelData[i];
+                const intSample = Math.floor(sample * 32768);
+                if ((intSample & 1) === 1) ones++;
+            }
+            
+            const ratio = ones / Math.min(10000, channelData.length);
+            
+            log('steganographyLog', `LSB distribution: ${(ratio * 100).toFixed(2)}% ones`, 'success');
+            
+            if (Math.abs(ratio - 0.5) > 0.1) {
+                log('steganographyLog', '⚠ UNUSUAL LSB PATTERN DETECTED!', 'warning');
+                log('steganographyLog', 'This may indicate hidden data', 'warning');
+            } else {
+                log('steganographyLog', 'LSB pattern appears normal', 'success');
+            }
+        }
+        
+        // NOISE FLOOR ANALYSIS
+        function analyzeNoiseFloor() {
+            if (!audioBuffer) {
+                alert('Please load an audio file first!');
+                return;
+            }
+            
+            log('steganographyLog', 'Analyzing noise floor...', 'success');
+            
+            const channelData = audioBuffer.getChannelData(0);
+            
+            // Find quiet sections
+            const windowSize = 4096;
+            let quietestRMS = Infinity;
+            let loudestRMS = 0;
+            
+            for (let i = 0; i < channelData.length - windowSize; i += windowSize) {
+                const window = channelData.slice(i, i + windowSize);
+                const rms = Math.sqrt(window.reduce((sum, val) => sum + val * val, 0) / windowSize);
+                
+                if (rms < quietestRMS) quietestRMS = rms;
+                if (rms > loudestRMS) loudestRMS = rms;
+            }
+            
+            const dynamicRange = 20 * Math.log10(loudestRMS / quietestRMS);
+            
+            log('steganographyLog', `Dynamic range: ${dynamicRange.toFixed(2)} dB`, 'success');
+            log('steganographyLog', `Noise floor: ${(quietestRMS * 100).toFixed(6)}`, 'success');
+            
+            if (quietestRMS > 0.001) {
+                log('steganographyLog', '⚠ Elevated noise floor detected!', 'warning');
+                log('steganographyLog', 'This could indicate data hiding', 'warning');
+            }
+        }
+        
+        // SSTV/MORSE DETECTION
+        function detectSSTV() {
+            if (!audioBuffer) {
+                alert('Please load an audio file first!');
+                return;
+            }
+            
+            log('steganographyLog', 'Scanning for SSTV/Morse patterns...', 'success');
+            
+            const channelData = audioBuffer.getChannelData(0);
+            const sampleRate = audioBuffer.sampleRate;
+            
+            // Look for SSTV calibration header (1900Hz, 1500Hz, 1900Hz, 1500Hz pattern)
+            const targetFreqs = [1900, 1500, 1900, 1500, 2300, 1200];
+            let sstvDetected = false;
+            
+            // Simple frequency detection
+            for (let i = 0; i < channelData.length - sampleRate; i += sampleRate / 10) {
+                const chunk = channelData.slice(i, i + sampleRate / 10);
+                const spectrum = computeFFT(chunk);
+                const peakIdx = spectrum.indexOf(Math.max(...spectrum));
+                const peakFreq = (peakIdx / spectrum.length) * (sampleRate / 2);
+                
+                for (const freq of targetFreqs) {
+                    if (Math.abs(peakFreq - freq) < 50) {
+                        sstvDetected = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (sstvDetected) {
+                log('steganographyLog', '⚠ POSSIBLE SSTV SIGNAL DETECTED!', 'warning');
+                log('steganographyLog', 'Use specialized SSTV decoder software', 'warning');
+            } else {
+                log('steganographyLog', 'No SSTV patterns detected', 'success');
+            }
+            
+            // Morse detection (look for on/off patterns)
+            log('steganographyLog', 'Checking for Morse code patterns...', 'success');
+            log('steganographyLog', 'Manual inspection recommended for Morse', 'warning');
+        }
+        
+        // METADATA EXTRACTION
+        function extractMetadata() {
+            if (!audioFile) {
+                alert('Please load an audio file first!');
+                return;
+            }
+            
+            clearLog('metadataLog');
+            log('metadataLog', 'Extracting metadata...', 'success');
+            
+            log('metadataLog', `Filename: ${audioFile.name}`, 'success');
+            log('metadataLog', `File size: ${(audioFile.size / 1024 / 1024).toFixed(2)} MB`, 'success');
+            log('metadataLog', `MIME type: ${audioFile.type}`, 'success');
+            log('metadataLog', `Last modified: ${new Date(audioFile.lastModified).toLocaleString()}`, 'success');
+            
+            if (audioBuffer) {
+                log('metadataLog', `Duration: ${audioBuffer.duration.toFixed(2)} seconds`, 'success');
+                log('metadataLog', `Sample rate: ${audioBuffer.sampleRate} Hz`, 'success');
+                log('metadataLog', `Channels: ${audioBuffer.numberOfChannels}`, 'success');
+                log('metadataLog', `Bit depth: 32-bit float (decoded)`, 'success');
+            }
+            
+            log('metadataLog', '⚠ Note: Advanced ID3/EXIF extraction requires specialized libraries', 'warning');
+            log('metadataLog', 'Check file properties manually for hidden tags', 'warning');
+        }
+        
+        // AUDIO EFFECTS
+        function reverseAudio() {
+            if (!audioBuffer) {
+                alert('Please load an audio file first!');
+                return;
+            }
+            
+            clearLog('effectsLog');
+            log('effectsLog', 'Reversing audio...', 'success');
+            
+            const reversed = audioContext.createBuffer(
+                audioBuffer.numberOfChannels,
+                audioBuffer.length,
+                audioBuffer.sampleRate
+            );
+            
+            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                const original = audioBuffer.getChannelData(channel);
+                const reversedData = reversed.getChannelData(channel);
+                
+                for (let i = 0; i < original.length; i++) {
+                    reversedData[i] = original[original.length - 1 - i];
+                }
+            }
+            
+            playModifiedAudio(reversed);
+            log('effectsLog', 'Audio reversed! Listen for hidden messages', 'success');
+        }
+        
+        function applySpeed(rate) {
+            if (!audioBuffer) {
+                alert('Please load an audio file first!');
+                return;
+            }
+            
+            clearLog('effectsLog');
+            log('effectsLog', `Applying ${rate}x speed...`, 'success');
+            
+            const player = document.getElementById('effectsPlayer');
+            player.playbackRate = rate;
+            
+            if (player.paused) {
+                player.src = URL.createObjectURL(audioFile);
+                player.classList.remove('hidden');
+            }
+            
+            log('effectsLog', `Playing at ${rate}x speed`, 'success');
+        }
+        
+        function playModifiedAudio(buffer) {
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            
+            const player = document.getElementById('effectsPlayer');
+            
+            // Convert buffer to blob for player
+            const offlineContext = new OfflineAudioContext(
+                buffer.numberOfChannels,
+                buffer.length,
+                buffer.sampleRate
+            );
+            
+            const offlineSource = offlineContext.createBufferSource();
+            offlineSource.buffer = buffer;
+            offlineSource.connect(offlineContext.destination);
+            offlineSource.start();
+            
+            offlineContext.startRendering().then(renderedBuffer => {
+                const wav = audioBufferToWav(renderedBuffer);
+                const blob = new Blob([wav], { type: 'audio/wav' });
+                player.src = URL.createObjectURL(blob);
+                player.classList.remove('hidden');
+            });
+        }
+        
+        // HELPER FUNCTIONS
+        function computeFFT(samples) {
+            // Simplified FFT for demo purposes
+            // In production, use a proper FFT library like fft.js
+            const N = samples.length;
+            const spectrum = new Array(N / 2).fill(0);
+            
+            for (let k = 0; k < N / 2; k++) {
+                let real = 0;
+                let imag = 0;
+                
+                for (let n = 0; n < N; n++) {
+                    const angle = -2 * Math.PI * k * n / N;
+                    real += samples[n] * Math.cos(angle);
+                    imag += samples[n] * Math.sin(angle);
+                }
+                
+                spectrum[k] = Math.sqrt(real * real + imag * imag) / N;
+            }
+            
+            return spectrum;
+        }
+        
+        function audioBufferToWav(buffer) {
+            const length = buffer.length * buffer.numberOfChannels * 2 + 44;
+            const arrayBuffer = new ArrayBuffer(length);
+            const view = new DataView(arrayBuffer);
+            const channels = [];
+            let offset = 0;
+            let pos = 0;
+            
+            // Write WAV header
+            setUint32(0x46464952); // "RIFF"
+            setUint32(length - 8); // file length - 8
+            setUint32(0x45564157); // "WAVE"
+            
+            setUint32(0x20746d66); // "fmt " chunk
+            setUint32(16); // length = 16
+            setUint16(1); // PCM (uncompressed)
+            setUint16(buffer.numberOfChannels);
+            setUint32(buffer.sampleRate);
+            setUint32(buffer.sampleRate * 2 * buffer.numberOfChannels); // avg. bytes/sec
+            setUint16(buffer.numberOfChannels * 2); // block-align
+            setUint16(16); // 16-bit
+            
+            setUint32(0x61746164); // "data" - chunk
+            setUint32(length - pos - 4); // chunk length
+            
+            // Write interleaved data
+            for (let i = 0; i < buffer.numberOfChannels; i++) {
+                channels.push(buffer.getChannelData(i));
+            }
+            
+            while (pos < length) {
+                for (let i = 0; i < buffer.numberOfChannels; i++) {
+                    let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                    view.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+            
+            return arrayBuffer;
+            
+            function setUint16(data) {
+                view.setUint16(pos, data, true);
+                pos += 2;
+            }
+            
+            function setUint32(data) {
+                view.setUint32(pos, data, true);
+                pos += 4;
+            }
+        }
+        
+        function downloadCanvas(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = `gboy_${canvasId}_${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>
